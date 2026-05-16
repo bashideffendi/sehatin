@@ -51,6 +51,12 @@ export function saveMealPlan(
   return stored;
 }
 
+/** Persist an in-place edit while preserving id + generated_at. */
+export function updateMealPlan(stored: StoredMealPlan): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(KEY, JSON.stringify(stored));
+}
+
 export function getActiveMealPlan(): StoredMealPlan | null {
   if (typeof window === "undefined") return null;
   try {
@@ -88,6 +94,187 @@ const SLOT_MAP: Record<string, MealSlot> = {
   "makan malam": "makan_malam",
   snack: "snack",
 };
+
+/** Reverse map: MealSlot enum → Claude's spaced slot string. */
+const REVERSE_SLOT_MAP: Record<MealSlot, string> = {
+  sarapan: "sarapan",
+  makan_siang: "makan siang",
+  makan_malam: "makan malam",
+  snack: "snack",
+};
+
+export function slotForClaude(slot: MealSlot): string {
+  return REVERSE_SLOT_MAP[slot];
+}
+
+// ============ Recompute helpers (after manual edits) ============
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+export function recomputeMeal(meal: Meal): Meal {
+  const total_kcal = meal.items.reduce((s, i) => s + i.kcal, 0);
+  const total_protein_g = round1(meal.items.reduce((s, i) => s + i.protein_g, 0));
+  return { ...meal, total_kcal, total_protein_g };
+}
+
+export function recomputeDay(day: DayPlan): DayPlan {
+  const meals = day.meals.map(recomputeMeal);
+  const total_kcal = meals.reduce((s, m) => s + m.total_kcal, 0);
+  const total_protein_g = round1(
+    meals.reduce((s, m) => s + m.total_protein_g, 0),
+  );
+  const total_fat_g = round1(
+    meals.reduce(
+      (s, m) => s + m.items.reduce((ss, i) => ss + i.fat_g, 0),
+      0,
+    ),
+  );
+  const total_carb_g = round1(
+    meals.reduce(
+      (s, m) => s + m.items.reduce((ss, i) => ss + i.carb_g, 0),
+      0,
+    ),
+  );
+  return { ...day, meals, total_kcal, total_protein_g, total_fat_g, total_carb_g };
+}
+
+export function recomputePlan(plan: MealPlan): MealPlan {
+  const days = plan.days.map(recomputeDay);
+  const avg_kcal =
+    days.length > 0
+      ? Math.round(days.reduce((s, d) => s + d.total_kcal, 0) / days.length)
+      : 0;
+  const avg_protein_g =
+    days.length > 0
+      ? round1(
+          days.reduce((s, d) => s + d.total_protein_g, 0) / days.length,
+        )
+      : 0;
+  return {
+    ...plan,
+    days,
+    summary: {
+      ...plan.summary,
+      avg_kcal,
+      avg_protein_g,
+    },
+  };
+}
+
+/** Default slot list — sarapan/siang/malam (+ snack if 4 meals). */
+export function defaultSlotsFor(mealsPerDay: number): string[] {
+  return mealsPerDay >= 4
+    ? ["sarapan", "makan siang", "makan malam", "snack"]
+    : ["sarapan", "makan siang", "makan malam"];
+}
+
+/** Build a blank plan with N days × M empty meal slots. */
+export function createBlankPlan(
+  days: number,
+  mealsPerDay: number,
+): MealPlan {
+  const slots = defaultSlotsFor(mealsPerDay);
+  return {
+    days: Array.from({ length: days }, (_, i) => ({
+      day: i + 1,
+      meals: slots.map((slot) => ({
+        slot,
+        items: [],
+        total_kcal: 0,
+        total_protein_g: 0,
+      })),
+      total_kcal: 0,
+      total_protein_g: 0,
+      total_fat_g: 0,
+      total_carb_g: 0,
+    })),
+    shopping_list: [],
+    summary: {
+      avg_kcal: 0,
+      avg_protein_g: 0,
+      notes: ["Plan ini dibikin manual. Edit bebas kapan aja."],
+    },
+  };
+}
+
+/** Immutable item mutations on a MealPlan. All return a new plan with totals re-computed. */
+export function addItemToMeal(
+  plan: MealPlan,
+  dayIdx: number,
+  mealIdx: number,
+  item: MealItem,
+): MealPlan {
+  const days = plan.days.map((d, di) => {
+    if (di !== dayIdx) return d;
+    return {
+      ...d,
+      meals: d.meals.map((m, mi) =>
+        mi !== mealIdx ? m : { ...m, items: [...m.items, item] },
+      ),
+    };
+  });
+  return recomputePlan({ ...plan, days });
+}
+
+export function removeItemFromMeal(
+  plan: MealPlan,
+  dayIdx: number,
+  mealIdx: number,
+  itemIdx: number,
+): MealPlan {
+  const days = plan.days.map((d, di) => {
+    if (di !== dayIdx) return d;
+    return {
+      ...d,
+      meals: d.meals.map((m, mi) =>
+        mi !== mealIdx
+          ? m
+          : { ...m, items: m.items.filter((_, ii) => ii !== itemIdx) },
+      ),
+    };
+  });
+  return recomputePlan({ ...plan, days });
+}
+
+/** Ensure a meal exists for given slot on a day; append if missing. */
+export function ensureMealSlot(
+  plan: MealPlan,
+  dayIdx: number,
+  slotName: string,
+): MealPlan {
+  const days = plan.days.map((d, di) => {
+    if (di !== dayIdx) return d;
+    if (d.meals.some((m) => m.slot.toLowerCase() === slotName.toLowerCase()))
+      return d;
+    return {
+      ...d,
+      meals: [
+        ...d.meals,
+        {
+          slot: slotName,
+          items: [],
+          total_kcal: 0,
+          total_protein_g: 0,
+        },
+      ],
+    };
+  });
+  return recomputePlan({ ...plan, days });
+}
+
+export function removeMealFromDay(
+  plan: MealPlan,
+  dayIdx: number,
+  mealIdx: number,
+): MealPlan {
+  const days = plan.days.map((d, di) => {
+    if (di !== dayIdx) return d;
+    return { ...d, meals: d.meals.filter((_, mi) => mi !== mealIdx) };
+  });
+  return recomputePlan({ ...plan, days });
+}
 
 export function normalizeSlot(claudeSlot: string): MealSlot | null {
   const k = claudeSlot.toLowerCase().trim();

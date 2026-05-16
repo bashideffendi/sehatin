@@ -586,7 +586,7 @@ export default function LogPage() {
               key={slot}
               className="p-4 sm:p-5 rounded-2xl bg-surface border border-border"
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2.5">
                   <span className="text-2xl">{MEAL_SLOT_EMOJI[slot]}</span>
                   <div>
@@ -594,13 +594,17 @@ export default function LogPage() {
                       {MEAL_SLOT_LABEL[slot]}
                     </div>
                     <div className="text-xs text-text-muted tabular-nums">
-                      {fmtNum(slotData.kcal)} kcal · {slotData.count} item
-                      {plannedMeal && (
+                      {plannedMeal ? (
                         <>
-                          {" · "}
-                          <span className="text-brand-600 font-medium">
-                            plan {fmtNum(plannedMeal.total_kcal)}
-                          </span>
+                          <span className="font-semibold text-fg">
+                            {fmtNum(slotData.kcal)}
+                          </span>{" "}
+                          / {fmtNum(plannedMeal.total_kcal)} kcal ·{" "}
+                          {slotData.count} item
+                        </>
+                      ) : (
+                        <>
+                          {fmtNum(slotData.kcal)} kcal · {slotData.count} item
                         </>
                       )}
                     </div>
@@ -625,6 +629,14 @@ export default function LogPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Per-slot progress bar (planned vs actual) */}
+              {plannedMeal && plannedMeal.total_kcal > 0 && (
+                <SlotProgressBar
+                  actual={slotData.kcal}
+                  planned={plannedMeal.total_kcal}
+                />
+              )}
 
               {/* Unlogged planned items (ghost rows) */}
               {unloggedPlanned.length > 0 && (
@@ -861,6 +873,54 @@ function WorkoutBanner({
       >
         Mulai
       </Link>
+    </div>
+  );
+}
+
+function SlotProgressBar({
+  actual,
+  planned,
+}: {
+  actual: number;
+  planned: number;
+}) {
+  const pct = planned > 0 ? actual / planned : 0;
+  const fillPct = Math.min(120, pct * 100);
+  const remaining = planned - actual;
+  let barColor = "bg-text-muted/30";
+  let label = "Belum mulai";
+  if (actual > 0) {
+    if (pct < 0.7) {
+      barColor = "bg-amber-300 dark:bg-amber-500/60";
+      label = `Sisa ${fmtNum(remaining)} kcal`;
+    } else if (pct < 0.9) {
+      barColor = "bg-brand-300 dark:bg-brand-500/60";
+      label = `Sisa ${fmtNum(remaining)} kcal`;
+    } else if (pct <= 1.1) {
+      barColor = "bg-brand-500";
+      label =
+        remaining > 0
+          ? `Sisa ${fmtNum(remaining)} kcal · hit target`
+          : "Hit target ✓";
+    } else if (pct <= 1.3) {
+      barColor = "bg-amber-500";
+      label = `Lewat ${fmtNum(-remaining)} kcal`;
+    } else {
+      barColor = "bg-rose-500";
+      label = `Lewat ${fmtNum(-remaining)} kcal`;
+    }
+  }
+  return (
+    <div className="mb-3">
+      <div className="h-1.5 bg-surface-muted rounded-full overflow-hidden">
+        <div
+          className={cn("h-full rounded-full transition-all", barColor)}
+          style={{ width: `${fillPct}%` }}
+        />
+      </div>
+      <div className="mt-1 text-[10px] text-text-muted tabular-nums">
+        {label}
+      </div>
     </div>
   );
 }

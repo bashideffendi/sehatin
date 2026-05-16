@@ -97,6 +97,12 @@ interface Props {
   open: boolean;
   defaultSlot?: MealSlot;
   defaultMode?: Mode;
+  /** Hide the meal-slot picker UI (used when slot is fixed by context, e.g. plan editor). */
+  hideSlotPicker?: boolean;
+  /** Hide the photo-analyze mode tab (e.g. when editing a meal plan — no realtime food). */
+  hidePhotoMode?: boolean;
+  /** Override the modal title. */
+  title?: string;
   onClose: () => void;
   onAdd: (data: {
     meal_slot: MealSlot;
@@ -116,6 +122,9 @@ export function AddFoodModal({
   open,
   defaultSlot = "sarapan",
   defaultMode = "search",
+  hideSlotPicker = false,
+  hidePhotoMode = false,
+  title = "Catat makanan",
   onClose,
   onAdd,
 }: Props) {
@@ -438,10 +447,10 @@ export function AddFoodModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-bold tracking-tight">Catat makanan</h2>
+          <h2 className="text-lg font-bold tracking-tight truncate">{title}</h2>
           <button
             onClick={handleClose}
-            className="w-9 h-9 rounded-lg hover:bg-surface-muted flex items-center justify-center"
+            className="w-9 h-9 rounded-lg hover:bg-surface-muted flex items-center justify-center flex-shrink-0"
             aria-label="Tutup"
           >
             <X className="w-5 h-5" />
@@ -449,28 +458,30 @@ export function AddFoodModal({
         </div>
 
         {/* Slot picker */}
-        <div className="px-4 pt-4">
-          <label className="text-xs font-semibold tracking-wide uppercase text-text-muted mb-2 block">
-            Slot
-          </label>
-          <div className="grid grid-cols-4 gap-1.5">
-            {MEAL_SLOTS.map((s) => (
-              <button
-                key={s}
-                onClick={() => setSlot(s)}
-                className={cn(
-                  "px-2 py-2 rounded-xl border-2 text-xs font-semibold flex flex-col items-center gap-1 transition-all",
-                  slot === s
-                    ? "border-brand-500 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300"
-                    : "border-border bg-surface text-fg/70 hover:border-fg/20",
-                )}
-              >
-                <span className="text-lg">{MEAL_SLOT_EMOJI[s]}</span>
-                <span>{MEAL_SLOT_LABEL[s]}</span>
-              </button>
-            ))}
+        {!hideSlotPicker && (
+          <div className="px-4 pt-4">
+            <label className="text-xs font-semibold tracking-wide uppercase text-text-muted mb-2 block">
+              Slot
+            </label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {MEAL_SLOTS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSlot(s)}
+                  className={cn(
+                    "px-2 py-2 rounded-xl border-2 text-xs font-semibold flex flex-col items-center gap-1 transition-all",
+                    slot === s
+                      ? "border-brand-500 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300"
+                      : "border-border bg-surface text-fg/70 hover:border-fg/20",
+                  )}
+                >
+                  <span className="text-lg">{MEAL_SLOT_EMOJI[s]}</span>
+                  <span>{MEAL_SLOT_LABEL[s]}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Mode toggle */}
         <div className="px-4 pt-4">
@@ -486,17 +497,19 @@ export function AddFoodModal({
             >
               🔍 Cari TKPI
             </button>
-            <button
-              onClick={() => setMode("photo")}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
-                mode === "photo"
-                  ? "bg-surface text-fg shadow-sm"
-                  : "text-text-muted hover:text-fg",
-              )}
-            >
-              📷 Foto
-            </button>
+            {!hidePhotoMode && (
+              <button
+                onClick={() => setMode("photo")}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                  mode === "photo"
+                    ? "bg-surface text-fg shadow-sm"
+                    : "text-text-muted hover:text-fg",
+                )}
+              >
+                📷 Foto
+              </button>
+            )}
             <button
               onClick={() => setMode("manual")}
               className={cn(

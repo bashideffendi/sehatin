@@ -18,11 +18,15 @@ import {
 import { loadProfile, type UserProfile } from "@/lib/profile";
 import {
   saveMealPlan,
+  updateMealPlan,
   getActiveMealPlan,
   clearMealPlan,
   normalizeSlot,
   shortDateID,
   shiftISODate,
+  createBlankPlan,
+  addItemToMeal,
+  removeItemFromMeal,
   type StoredMealPlan,
   type Meal,
   type MealItem,
@@ -34,6 +38,8 @@ import {
   MEAL_SLOT_EMOJI,
   type MealSlot,
 } from "@/lib/food-log";
+import { calculateTargets } from "@/src/nutrition/tdee";
+import { AddFoodModal } from "@/components/add-food-modal";
 import { cn, fmtNum } from "@/lib/utils";
 
 const REQUIRED_FIELDS: (keyof UserProfile)[] = [
@@ -59,6 +65,14 @@ export default function PlanPage() {
   const [days, setDays] = useState(3);
   const [mealsPerDay, setMealsPerDay] = useState(3);
   const [contextNotes, setContextNotes] = useState("");
+
+  // Edit modal: which slot to add an item to
+  const [editTarget, setEditTarget] = useState<{
+    dayIdx: number;
+    mealIdx: number;
+    slotLabel: string;
+    slotEnum: MealSlot | null;
+  } | null>(null);
 
   // Hydrate on mount
   useEffect(() => {
@@ -138,6 +152,71 @@ export default function PlanPage() {
     setActiveDayIdx(0);
     setAppliedDayIdx(null);
   }, []);
+
+  const handleCreateBlankPlan = useCallback(
+    (n_days: number, n_meals: number) => {
+      if (!profile) return;
+      // Compute targets even though plan is blank — needed for display
+      let targets;
+      try {
+        targets = calculateTargets({
+          age: profile.age!,
+          sex: profile.sex!,
+          weight_kg: profile.weight_kg!,
+          height_cm: profile.height_cm!,
+          activity: profile.activity!,
+          goal: profile.goal!,
+        });
+      } catch {
+        setError("Profil belum cukup buat hitung target.");
+        return;
+      }
+      const blank = createBlankPlan(n_days, n_meals);
+      const stored = saveMealPlan({
+        start_date: todayISO(),
+        days: n_days,
+        diet_method: profile.diet_method,
+        budget_idr_per_day: profile.budget_idr_per_day,
+        context_notes: contextNotes.trim() || undefined,
+        targets,
+        plan: blank,
+      });
+      setActivePlan(stored);
+      setActiveDayIdx(0);
+      setAppliedDayIdx(null);
+      setShowConfig(false);
+      setError(null);
+    },
+    [profile, contextNotes],
+  );
+
+  // Item editing handlers — mutate the stored plan in-place
+  const handleAddItem = useCallback(
+    (dayIdx: number, mealIdx: number, item: MealItem) => {
+      setActivePlan((cur) => {
+        if (!cur) return cur;
+        const nextPlan = addItemToMeal(cur.plan, dayIdx, mealIdx, item);
+        const updated: StoredMealPlan = { ...cur, plan: nextPlan };
+        // Persist
+        updateMealPlan(updated);
+        return updated;
+      });
+    },
+    [],
+  );
+
+  const handleRemoveItem = useCallback(
+    (dayIdx: number, mealIdx: number, itemIdx: number) => {
+      setActivePlan((cur) => {
+        if (!cur) return cur;
+        const nextPlan = removeItemFromMeal(cur.plan, dayIdx, mealIdx, itemIdx);
+        const updated: StoredMealPlan = { ...cur, plan: nextPlan };
+        updateMealPlan(updated);
+        return updated;
+      });
+    },
+    [],
+  );
 
   const handleLogDay = useCallback(
     (dayIdx: number) => {
@@ -263,12 +342,31 @@ export default function PlanPage() {
           className="mt-6 w-full px-6 py-4 rounded-2xl font-bold text-lg bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-600/30 hover:-translate-y-0.5 transition-transform inline-flex items-center justify-center gap-2"
         >
           <Sparkles className="w-5 h-5" />
-          Generate Plan
+          Generate Plan dengan AI
         </button>
         <p className="mt-3 text-xs text-text-muted text-center leading-relaxed">
-          AI akan compose plan berdasar profil kamu, kondisi medis, alergi,
-          target kalori/macro, dan harga PIHPS lokal. Estimasi waktu: 30-60
-          detik.
+          AI compose plan berdasar profil + kondisi medis + alergi + target +
+          harga PIHPS lokal. Estimasi waktu: 30-60 detik.
+        </p>
+
+        <div className="mt-6 relative">
+          <div className="absolute inset-0 flex items-center" aria-hidden>
+            <div className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-[10px] uppercase tracking-wider font-bold text-text-muted">
+            <span className="px-3 bg-bg">atau</span>
+          </div>
+        </div>
+
+        <button
+          onClick={() => handleCreateBlankPlan(days, mealsPerDay)}
+          className="mt-4 w-full px-6 py-3 rounded-2xl font-semibold bg-surface border-2 border-border hover:border-brand-300 inline-flex items-center justify-center gap-2 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Bikin plan manual ({days} hari × {mealsPerDay} meal kosong)
+        </button>
+        <p className="mt-2 text-xs text-text-muted text-center leading-relaxed">
+          Plan kosong, isi sendiri item per meal pakai cari TKPI atau manual.
         </p>
       </div>
     );
@@ -445,10 +543,28 @@ export default function PlanPage() {
               const slot = normalizeSlot(meal.slot);
               return (
                 <MealCard
-                  key={mi}
+                  key={`${activeDayIdx}-${mi}`}
                   meal={meal}
                   slot={slot}
+                  targetKcal={
+                    plan.targets.target_kcal
+                      ? Math.round(
+                          plan.targets.target_kcal / day.meals.length,
+                        )
+                      : null
+                  }
                   onLog={() => handleLogMeal(activeDayIdx, meal)}
+                  onAddItem={() =>
+                    setEditTarget({
+                      dayIdx: activeDayIdx,
+                      mealIdx: mi,
+                      slotLabel: meal.slot,
+                      slotEnum: slot,
+                    })
+                  }
+                  onRemoveItem={(itemIdx) =>
+                    handleRemoveItem(activeDayIdx, mi, itemIdx)
+                  }
                 />
               );
             })}
@@ -600,6 +716,40 @@ export default function PlanPage() {
           </div>
         </div>
       )}
+
+      {/* Add item modal (plan edit) — reuse AddFoodModal with slot fixed */}
+      <AddFoodModal
+        open={editTarget !== null}
+        defaultSlot={editTarget?.slotEnum ?? "sarapan"}
+        defaultMode="search"
+        hideSlotPicker
+        hidePhotoMode
+        title={
+          editTarget
+            ? `Tambah ke ${
+                editTarget.slotEnum
+                  ? MEAL_SLOT_LABEL[editTarget.slotEnum]
+                  : editTarget.slotLabel
+              }`
+            : "Tambah item"
+        }
+        onClose={() => setEditTarget(null)}
+        onAdd={(data) => {
+          if (!editTarget) return;
+          // Convert /log modal output to MealItem; require macros (default 0 if missing)
+          const item: MealItem = {
+            food_code: data.food_code ?? `manual-${Date.now()}`,
+            food_name: data.food_name,
+            portion_g: data.portion_g,
+            kcal: data.kcal,
+            protein_g: data.protein_g ?? 0,
+            fat_g: data.fat_g ?? 0,
+            carb_g: data.carb_g ?? 0,
+          };
+          handleAddItem(editTarget.dayIdx, editTarget.mealIdx, item);
+          setEditTarget(null);
+        }}
+      />
     </div>
   );
 }
@@ -774,39 +924,60 @@ function Macro({
 function MealCard({
   meal,
   slot,
+  targetKcal,
   onLog,
+  onAddItem,
+  onRemoveItem,
 }: {
   meal: Meal;
   slot: MealSlot | null;
+  targetKcal: number | null;
   onLog: () => void;
+  onAddItem: () => void;
+  onRemoveItem: (itemIdx: number) => void;
 }) {
   const [logged, setLogged] = useState(false);
   const slotLabel = slot
     ? `${MEAL_SLOT_EMOJI[slot]} ${MEAL_SLOT_LABEL[slot]}`
     : meal.slot;
+  const isEmpty = meal.items.length === 0;
   return (
     <div className="p-4 rounded-2xl bg-surface border border-border">
       <div className="flex items-start justify-between gap-3 mb-3">
-        <div>
+        <div className="min-w-0">
           <div className="font-semibold tracking-tight">{slotLabel}</div>
           <div className="text-xs text-text-muted tabular-nums">
             {fmtNum(meal.total_kcal)} kcal · P{meal.total_protein_g}g
+            {targetKcal && (
+              <span className="text-text-muted/70">
+                {" "}
+                · target ~{fmtNum(targetKcal)}
+              </span>
+            )}
           </div>
         </div>
         <button
           onClick={() => {
-            if (logged) return;
+            if (logged || isEmpty) return;
             onLog();
             setLogged(true);
           }}
-          disabled={logged}
+          disabled={logged || isEmpty}
           className={cn(
             "px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 flex-shrink-0",
-            logged
-              ? "bg-brand-50 dark:bg-brand-500/15 text-brand-700 dark:text-brand-300 cursor-default"
-              : "bg-fg/5 hover:bg-fg/10 text-fg",
+            isEmpty
+              ? "bg-surface-muted text-text-muted/50 cursor-not-allowed"
+              : logged
+                ? "bg-brand-50 dark:bg-brand-500/15 text-brand-700 dark:text-brand-300 cursor-default"
+                : "bg-fg/5 hover:bg-fg/10 text-fg",
           )}
-          title={logged ? "Udah di-log" : "Log meal ini ke catatan harian"}
+          title={
+            isEmpty
+              ? "Tambah item dulu"
+              : logged
+                ? "Udah di-log"
+                : "Log meal ini ke catatan harian"
+          }
         >
           {logged ? (
             <>
@@ -819,19 +990,43 @@ function MealCard({
           )}
         </button>
       </div>
-      <ul className="space-y-1.5">
-        {meal.items.map((item: MealItem, i: number) => (
-          <li
-            key={i}
-            className="flex items-baseline justify-between gap-2 text-sm"
-          >
-            <span className="flex-1 min-w-0 truncate">{item.food_name}</span>
-            <span className="text-text-muted tabular-nums text-xs flex-shrink-0">
-              {item.portion_g}g · {fmtNum(item.kcal)} kcal
-            </span>
-          </li>
-        ))}
-      </ul>
+      {meal.items.length > 0 ? (
+        <ul className="space-y-1">
+          {meal.items.map((item: MealItem, i: number) => (
+            <li
+              key={i}
+              className="group flex items-baseline gap-2 text-sm py-1 px-2 -mx-2 rounded hover:bg-surface-muted/60"
+            >
+              <span className="flex-1 min-w-0 truncate">{item.food_name}</span>
+              <span className="text-text-muted tabular-nums text-xs flex-shrink-0">
+                {item.portion_g}g · {fmtNum(item.kcal)} kcal
+              </span>
+              <button
+                onClick={() => {
+                  if (confirm(`Hapus "${item.food_name}" dari plan?`)) {
+                    onRemoveItem(i);
+                  }
+                }}
+                className="w-6 h-6 rounded text-text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/15 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                aria-label="Hapus item"
+                title="Hapus dari plan"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="text-xs text-text-muted text-center py-2">
+          Belum ada item.
+        </div>
+      )}
+      <button
+        onClick={onAddItem}
+        className="mt-2 w-full py-2 rounded-lg border-2 border-dashed border-border hover:border-brand-300 hover:bg-brand-50/40 dark:hover:bg-brand-500/10 text-xs text-text-muted hover:text-brand-600 font-semibold transition-colors inline-flex items-center justify-center gap-1.5"
+      >
+        <Plus className="w-3 h-3" /> Tambah item
+      </button>
       {meal.notes && (
         <p className="mt-2 pt-2 border-t border-border/50 text-xs text-text-muted italic leading-snug">
           {meal.notes}
