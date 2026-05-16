@@ -5,6 +5,7 @@ import { Menu, X, Sparkles, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
+  { href: "/", label: "Dashboard" },
   { href: "/log", label: "Catatan" },
   { href: "/plan", label: "Plan" },
   { href: "/workout", label: "Workout" },
