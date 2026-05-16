@@ -4,22 +4,24 @@ import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 
 export const metadata: Metadata = {
-  title: "Sehatin — Fitness & wellness tools Indonesia",
+  title: "Sehatin — Nutrisi dan latihan, data Indonesia",
   description:
-    "Meal plan budget-aware, workout sesuai equipment, IF timer, BMI Asia-Pacific. Data makanan & harga real Indonesia. Fun, mudah, science-based.",
+    "AI compose plan makan dan workout dari profil kamu, kondisi medis, alergi, dan budget. Pakai komposisi gizi TKPI Kemenkes dan harga pasar PIHPS Bank Indonesia.",
   keywords: [
-    "fitness Indonesia",
-    "meal plan",
-    "BMI calculator",
-    "intermittent fasting",
-    "TKPI",
     "diet Indonesia",
+    "meal plan TKPI",
+    "kalori makanan Indonesia",
+    "BMI Asia-Pacific",
+    "intermittent fasting",
+    "workout program",
+    "nutrisi AI",
+    "PIHPS harga pangan",
   ],
   authors: [{ name: "Bashid Effendi" }],
   openGraph: {
-    title: "Sehatin — Fitness & wellness tools Indonesia",
+    title: "Sehatin — Nutrisi dan latihan, data Indonesia",
     description:
-      "Meal plan budget-aware, workout sesuai equipment, IF timer, BMI Asia-Pacific.",
+      "AI compose plan makan dan workout pakai komposisi gizi TKPI Kemenkes dan harga pasar PIHPS Bank Indonesia.",
     type: "website",
     locale: "id_ID",
   },

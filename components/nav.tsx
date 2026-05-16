@@ -9,10 +9,6 @@ const links = [
   { href: "/plan", label: "Plan" },
   { href: "/workout", label: "Workout" },
   { href: "/tools", label: "Tools" },
-  { href: "/tools/tdee", label: "TDEE" },
-  { href: "/tools/bmi", label: "BMI" },
-  { href: "/tools/macro", label: "Macro" },
-  { href: "/tools/if", label: "IF Timer" },
 ];
 
 export function Nav() {

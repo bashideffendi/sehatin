@@ -9,6 +9,7 @@ import {
   Dumbbell,
   Database,
   Download,
+  Upload,
   Trash2,
   RotateCcw,
   CheckCircle2,
@@ -221,6 +222,49 @@ export default function SettingsPage() {
     a.download = `sehatin-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }, []);
+
+  const handleImport = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json,.json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text) as Record<string, unknown>;
+        const keysToImport = STORAGE_KEYS.filter((k) => k in data);
+        if (keysToImport.length === 0) {
+          alert(
+            "File ini bukan backup Sehatin (gak ada key Sehatin yang dikenali). Pastikan file yang dipilih hasil Export dari /settings.",
+          );
+          return;
+        }
+        const labels = keysToImport
+          .map((k) => "  • " + k.replace("sehatin:", "").replace(/:v\d+$/, ""))
+          .join("\n");
+        const confirmed = window.confirm(
+          `Import ${keysToImport.length} jenis data dari backup? Data yang ada sekarang bakal di-overwrite.\n\nYang bakal di-import:\n${labels}`,
+        );
+        if (!confirmed) return;
+        for (const key of keysToImport) {
+          const value = data[key];
+          if (value !== null && typeof value === "object") {
+            window.localStorage.setItem(key, JSON.stringify(value));
+          }
+        }
+        setProfile(loadProfile());
+        alert(
+          `${keysToImport.length} jenis data berhasil di-import. Halaman bakal reload buat sinkronin tampilan.`,
+        );
+        window.location.reload();
+      } catch (err) {
+        alert(`Gagal baca file: ${(err as Error).message}`);
+      }
+    };
+    input.click();
   }, []);
 
   const handleClearAll = useCallback(() => {
@@ -487,7 +531,7 @@ export default function SettingsPage() {
       >
         <p className="text-xs text-text-muted leading-relaxed -mt-1">
           Semua data Sehatin disimpan di browser kamu (localStorage), gak ada
-          server. Bisa backup lewat export atau hapus total kapan aja.
+          server. Bisa backup, restore, atau hapus total kapan aja.
         </p>
         <div className="grid sm:grid-cols-2 gap-2 mt-3">
           <button
@@ -497,12 +541,22 @@ export default function SettingsPage() {
             <Download className="w-4 h-4" /> Export JSON
           </button>
           <button
-            onClick={handleResetProfile}
-            className="px-4 py-3 rounded-xl border border-border hover:border-amber-300 hover:bg-amber-50/40 dark:hover:bg-amber-500/10 text-sm font-semibold inline-flex items-center justify-center gap-2"
+            onClick={handleImport}
+            className="px-4 py-3 rounded-xl border border-border hover:border-sky-300 hover:bg-sky-50/40 dark:hover:bg-sky-500/10 text-sm font-semibold inline-flex items-center justify-center gap-2"
           >
-            <RotateCcw className="w-4 h-4" /> Ulang onboarding
+            <Upload className="w-4 h-4" /> Import JSON
           </button>
         </div>
+        <p className="text-[11px] text-text-muted mt-1.5 leading-relaxed">
+          Import bakal overwrite data yang ada (profile, catatan harian, plan,
+          dst). Berguna buat pindah browser atau restore backup.
+        </p>
+        <button
+          onClick={handleResetProfile}
+          className="mt-3 w-full px-4 py-3 rounded-xl border border-border hover:border-amber-300 hover:bg-amber-50/40 dark:hover:bg-amber-500/10 text-sm font-semibold inline-flex items-center justify-center gap-2"
+        >
+          <RotateCcw className="w-4 h-4" /> Ulang onboarding (cuma reset profil)
+        </button>
         <button
           onClick={handleClearAll}
           className="mt-2 w-full px-4 py-3 rounded-xl border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-semibold inline-flex items-center justify-center gap-2"

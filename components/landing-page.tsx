@@ -7,7 +7,7 @@ import {
   Salad,
   Dumbbell,
   Sparkles,
-  TrendingUp,
+  ArrowRight,
   Wallet,
   CookingPot,
 } from "lucide-react";
@@ -21,25 +21,20 @@ export function LandingPage() {
           <div className="max-w-3xl">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-semibold tracking-wide border border-brand-200">
               <Sparkles className="w-3.5 h-3.5" />
-              Fitness & wellness untuk Indonesia
+              Untuk pengguna Indonesia
             </span>
 
             <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1]">
-              Sehat itu{" "}
-              <span className="bg-gradient-to-br from-brand-500 to-brand-700 bg-clip-text text-transparent">
-                gampang
-              </span>{" "}
-              dan{" "}
-              <span className="bg-gradient-to-br from-accent-400 to-accent-600 bg-clip-text text-transparent">
-                fun
+              <span className="block">Plan makan dan latihan,</span>
+              <span className="block bg-gradient-to-br from-brand-500 to-brand-700 bg-clip-text text-transparent">
+                data Indonesia.
               </span>
-              .
             </h1>
 
             <p className="mt-6 text-lg sm:text-xl text-text-muted max-w-2xl leading-relaxed">
-              Meal plan budget-aware pakai harga pasar real, workout sesuai
-              equipment dan goal kamu, BMI dengan cut-off Asia-Pacific, IF
-              timer dengan metabolic phase. Semua dalam bahasa Indonesia.
+              AI compose nutrisi dan latihan dari profil kamu, kondisi medis,
+              alergi, dan budget. Pakai komposisi gizi TKPI Kemenkes, harga
+              pasar PIHPS Bank Indonesia, dan exercise pool terstruktur.
             </p>
 
             <div className="mt-10 flex flex-wrap gap-3">
@@ -47,8 +42,8 @@ export function LandingPage() {
                 href="/onboarding"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold shadow-lg shadow-brand-600/20 hover:bg-brand-700 hover:shadow-xl hover:shadow-brand-600/30 hover:-translate-y-0.5 transition-all"
               >
-                Mulai Quiz 1 menit
-                <TrendingUp className="w-4 h-4" />
+                Mulai quiz
+                <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/tools"
@@ -62,15 +57,15 @@ export function LandingPage() {
             <div className="mt-12 flex flex-wrap gap-x-8 gap-y-3 text-sm text-text-muted">
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
-                1,146 makanan TKPI Kemenkes
+                TKPI Kemenkes · 1.146 makanan
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent-500" />
-                Harga real 33 provinsi (PIHPS BI)
+                PIHPS Bank Indonesia · 33 provinsi
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-                60+ exercise database
+                Exercise pool · 60+ gerakan
               </div>
             </div>
           </div>
@@ -82,11 +77,12 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-              Kenapa Sehatin beda?
+              Yang beda
             </h2>
-            <p className="mt-4 text-lg text-text-muted">
-              Kompetitor (MyFitnessPal, Fitatu, dll) generic banget buat
-              makanan Indonesia. Sehatin native ID.
+            <p className="mt-4 text-lg text-text-muted leading-relaxed">
+              Aplikasi diet umumnya pakai database makanan asing — gak kenal
+              nasi padang, gak tahu harga warteg. Sehatin native Indonesia,
+              dari data sampai bahasa.
             </p>
           </div>
 
@@ -94,20 +90,20 @@ export function LandingPage() {
             <ValuePropCard
               icon={<Wallet className="w-6 h-6" />}
               accent="brand"
-              title="Budget-aware"
-              text="Input budget makan kamu (Rp 30k/hari? 60k? 100k?). Meal plan adjust pakai harga pasar real 33 provinsi."
+              title="Adjust budget kamu"
+              text="Set budget makan harian. AI compose plan pakai harga pasar real-time PIHPS Bank Indonesia, 33 provinsi. Tahu beda harga ayam di Jakarta sama Manado."
             />
             <ValuePropCard
               icon={<CookingPot className="w-6 h-6" />}
               accent="accent"
-              title="Makanan Indonesia"
-              text="Rendang, nasi padang, gado-gado, soto. Komposisi gizi sesuai TKPI Kemenkes, bukan database asing yang ngarang."
+              title="Komposisi gizi lokal"
+              text="Rendang, gado-gado, soto, nasi padang — semua punya nilai gizi akurat dari TKPI Kemenkes resmi. Database referensi, bukan tebakan."
             />
             <ValuePropCard
               icon={<Camera className="w-6 h-6" />}
               accent="sky"
-              title="Foto = kalori"
-              text="Foto piring kamu, AI identifikasi item + estimasi porsi + hitung kalori. Buat makanan rumah/warteg yang gak ada di database."
+              title="Foto langsung kalori"
+              text="Foto piring makanan kamu. AI identifikasi tiap lauk, estimasi porsi, hitung total kalori. Termasuk makanan rumah dan warung yang gak ada di database manapun."
             />
           </div>
         </div>
@@ -119,10 +115,11 @@ export function LandingPage() {
           <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
             <div>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-                Tools yang bisa kamu pakai
+                Tools yang tersedia
               </h2>
-              <p className="mt-3 text-text-muted">
-                Dari kalkulator deterministic sampai AI-powered planner.
+              <p className="mt-3 text-text-muted leading-relaxed">
+                Dari kalkulator dasar sampai AI generator. Semuanya bahasa
+                Indonesia.
               </p>
             </div>
             <Link
@@ -138,49 +135,49 @@ export function LandingPage() {
               href="/tools/tdee"
               icon={<Calculator />}
               title="TDEE & Macro"
-              text="Hitung kalori harian + macro split pakai Mifflin-St Jeor."
+              text="Kebutuhan kalori harian dan macro split. Formula Mifflin-St Jeor."
               badge="Gratis"
             />
             <ToolMini
               href="/tools/macro"
               icon={<Calculator />}
               title="Macro Calculator"
-              text="Konversi kalori ↔ gram makro. 7 preset diet siap pakai."
+              text="Konversi kalori ke gram makro. 12 preset diet siap pakai."
               badge="Gratis"
             />
             <ToolMini
               href="/tools/bmi"
               icon={<Activity />}
               title="BMI Asia-Pacific"
-              text="Cut-off Kemenkes RI. Lingkar pinggang untuk obesitas sentral."
+              text="Cut-off Kemenkes RI plus lingkar pinggang untuk obesitas sentral."
               badge="Gratis"
             />
             <ToolMini
               href="/tools/if"
               icon={<Timer />}
               title="IF Timer"
-              text="7 protokol (16:8, OMAD, Ramadan...) + metabolic phase tracker."
+              text="7 protokol intermittent fasting plus tracker fase metabolik."
               badge="Gratis"
             />
             <ToolMini
               href="/plan"
               icon={<Salad />}
-              title="Meal Plan"
-              text="12 diet method (keto, mediterranean, DASH, plant-based) + budget."
+              title="Meal Plan AI"
+              text="12 metode diet (keto, mediterranean, DASH, plant-based) plus budget-aware."
               badge="AI"
             />
             <ToolMini
               href="/workout"
               icon={<Dumbbell />}
-              title="Workout Plan"
-              text="6 goal × 5 split + progressive overload. Equipment-aware."
+              title="Workout Program AI"
+              text="6 goal × 5 split + progressive overload. Disesuaikan equipment yang tersedia."
               badge="AI"
             />
             <ToolMini
               href="/log"
               icon={<Camera />}
               title="Foto Analyzer"
-              text="Foto makanan → identifikasi + kalori + macro grounded TKPI."
+              text="Foto makanan → identifikasi item, estimasi porsi, hitung kalori dan macro."
               badge="AI"
             />
           </div>
@@ -191,17 +188,19 @@ export function LandingPage() {
       <section className="border-t border-border">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-20 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            Siap mulai?
+            Mulai dari quiz singkat.
           </h2>
-          <p className="mt-4 text-lg text-text-muted">
-            Setup profil 1 menit, AI bikin meal plan + workout pertama kamu.
+          <p className="mt-4 text-lg text-text-muted leading-relaxed">
+            Setup profil 1 menit — usia, target, kondisi medis, alergi,
+            budget. AI langsung compose meal plan dan workout pertama. Bisa
+            di-edit kapan aja.
           </p>
           <Link
             href="/onboarding"
             className="mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold shadow-lg shadow-brand-600/20 hover:bg-brand-700 hover:-translate-y-0.5 transition-all"
           >
-            Mulai Quiz 1 menit
-            <TrendingUp className="w-4 h-4" />
+            Mulai quiz
+            <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </section>
