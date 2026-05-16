@@ -1,0 +1,30 @@
+node_modules/
+dist/
+.env
+.env.local
+.env*.local
+*.log
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# Vercel
+.vercel
+
+# SQLite — commit sehatin.db (small, used by API routes) but skip WAL/journal + raw
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+data/raw/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
