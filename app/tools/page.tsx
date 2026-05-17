@@ -1,190 +1,255 @@
 import Link from "next/link";
 import {
+  ArrowRight,
   Calculator,
   Activity,
   Timer,
   Camera,
   Salad,
   Dumbbell,
-  Sparkles,
-  PieChart,
-  UserPlus,
+  Droplet,
+  Flame,
 } from "lucide-react";
+import { Pill, Btn, Card, Kicker } from "@/components/ui";
 
 export const metadata = {
   title: "Tools · Sehatin",
   description:
-    "Semua tools fitness & wellness: TDEE, BMI, IF Timer, Meal Planner, Workout Planner, Foto Analyzer.",
+    "Kalkulator BMI, TDEE, Macro, IF Timer, dan AI generator untuk pengguna Indonesia.",
 };
-
-interface Tool {
-  href?: string;
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-  badge: "Gratis" | "AI";
-  category: "Nutrisi" | "Fitness" | "Tracking";
-  comingSoon?: boolean;
-}
-
-const TOOLS: Tool[] = [
-  {
-    href: "/onboarding",
-    icon: <UserPlus />,
-    title: "Setup Profil (Quiz)",
-    desc: "Quiz interaktif 1 menit — hitung target kalori, macro, dan rekomendasi diet sesuai goal kamu. Disimpan di browser.",
-    badge: "Gratis",
-    category: "Tracking",
-  },
-  {
-    href: "/tools/tdee",
-    icon: <Calculator />,
-    title: "TDEE & Macro Calculator",
-    desc: "Hitung kebutuhan kalori harian (BMR + activity) + macro split per goal (fat loss, maintain, muscle gain).",
-    badge: "Gratis",
-    category: "Nutrisi",
-  },
-  {
-    href: "/tools/macro",
-    icon: <PieChart />,
-    title: "Macronutrient Calculator",
-    desc: "Hitung gram protein/lemak/karbo dari target kalori, atau sebaliknya. 7 preset (seimbang, fat loss, keto, dll) + custom %.",
-    badge: "Gratis",
-    category: "Nutrisi",
-  },
-  {
-    href: "/tools/bmi",
-    icon: <Activity />,
-    title: "BMI Asia-Pacific",
-    desc: "BMI dengan cut-off WHO Asia-Pacific (Kemenkes RI default). Lingkar pinggang untuk indikator obesitas sentral.",
-    badge: "Gratis",
-    category: "Tracking",
-  },
-  {
-    href: "/tools/if",
-    icon: <Timer />,
-    title: "Intermittent Fasting Timer",
-    desc: "7 protokol (16:8, 18:6, 20:4, OMAD, 5:2, Eat-Stop-Eat, Ramadan). Track elapsed time + metabolic phase real-time.",
-    badge: "Gratis",
-    category: "Tracking",
-  },
-  {
-    icon: <Salad />,
-    title: "Meal Plan Generator",
-    desc: "Plan harian/mingguan dengan 12 diet method (keto, mediterranean, DASH, plant-based, low-purine, dll). Budget-aware pakai harga PIHPS.",
-    badge: "AI",
-    category: "Nutrisi",
-    comingSoon: true,
-  },
-  {
-    icon: <Dumbbell />,
-    title: "Workout Plan Generator",
-    desc: "Program latihan 6 goal (strength, hypertrophy, fat loss, dll) × 5 split (full body, upper/lower, PPL). 60+ exercise database.",
-    badge: "AI",
-    category: "Fitness",
-    comingSoon: true,
-  },
-  {
-    icon: <Camera />,
-    title: "Foto → Kalori Analyzer",
-    desc: "Foto makanan kamu, AI identifikasi item + estimasi porsi + hitung kalori & macro. Grounded ke 1,146 item TKPI.",
-    badge: "AI",
-    category: "Nutrisi",
-    comingSoon: true,
-  },
-];
-
-const categories = ["Nutrisi", "Fitness", "Tracking"] as const;
 
 export default function ToolsPage() {
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8 sm:py-10">
       {/* Header */}
-      <div className="max-w-2xl">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-semibold border border-brand-200">
-          <Sparkles className="w-3.5 h-3.5" />
-          6 tools
-        </span>
-        <h1 className="mt-4 text-4xl sm:text-5xl font-bold tracking-tight">
-          Semua tools yang kamu butuhin
+      <div className="mb-8 sm:mb-10">
+        <Kicker>Tools</Kicker>
+        <h1 className="mt-2 text-4xl sm:text-[52px] font-extrabold tracking-tight leading-[1.05]">
+          Kalkulator{" "}
+          <span
+            className="font-normal italic text-clay"
+            style={{ fontFamily: "var(--font-serif)" }}
+          >
+            & timer.
+          </span>
         </h1>
-        <p className="mt-4 text-lg text-text-muted">
-          3 tools gratis bisa langsung dipakai. 3 tools AI-powered butuh API
-          key Claude (segera bisa diakses).
+        <p className="mt-3 text-muted text-sm sm:text-base">
+          Gratis pakai · gak perlu daftar · bahasa Indonesia.
         </p>
       </div>
 
-      {/* Grid grouped by category */}
-      <div className="mt-12 space-y-12">
-        {categories.map((cat) => {
-          const tools = TOOLS.filter((t) => t.category === cat);
-          return (
-            <div key={cat}>
-              <div className="flex items-baseline gap-3 mb-5">
-                <h2 className="text-xl font-bold tracking-tight">{cat}</h2>
-                <span className="text-xs text-text-muted">
-                  {tools.length} tool
-                </span>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {tools.map((tool, idx) => (
-                  <ToolCard key={idx} tool={tool} />
-                ))}
-              </div>
+      {/* IF Timer feature card */}
+      <Card
+        radius="xl"
+        shadow="paper-2"
+        className="paper-grain p-6 sm:p-10 mb-6 sm:mb-8 relative overflow-hidden"
+      >
+        <div className="grid lg:grid-cols-[1.3fr_1fr] gap-6 lg:gap-10 items-center">
+          <div>
+            <Pill tone="clay" size="md" icon={<Timer className="w-3 h-3" />}>
+              IF Timer
+            </Pill>
+            <h2 className="mt-3 text-2xl sm:text-[40px] font-extrabold tracking-tight leading-[1.05]">
+              7 protokol{" "}
+              <span
+                className="font-normal italic text-clay"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                intermittent fasting.
+              </span>
+            </h2>
+            <p className="mt-3 text-[13.5px] sm:text-sm text-muted leading-relaxed max-w-md">
+              16:8, 18:6, 20:4, OMAD, ADF, 5:2, Warrior. Mode Ramadan
+              auto-aktif menyesuaikan sahur–buka. Tracker fase metabolik
+              (glikogen, ketosis, autofagi).
+            </p>
+            <div className="mt-6">
+              <Btn variant="clay" size="md" iconRight={<ArrowRight />}>
+                <Link href="/tools/if" className="contents">
+                  Buka timer
+                </Link>
+              </Btn>
             </div>
-          );
-        })}
+          </div>
+
+          <div className="hidden lg:flex items-center justify-center">
+            <TimerPreview />
+          </div>
+        </div>
+      </Card>
+
+      {/* Tools grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ToolCard
+          href="/tools/bmi"
+          icon={<Activity />}
+          title="BMI Asia-Pacific"
+          text="Cut-off Kemenkes RI · lingkar pinggang untuk obesitas sentral."
+          badge="Gratis"
+        />
+        <ToolCard
+          href="/tools/tdee"
+          icon={<Droplet />}
+          title="TDEE & BMR"
+          text="Mifflin-St Jeor · 5 level aktivitas · target defisit/surplus."
+          badge="Gratis"
+        />
+        <ToolCard
+          href="/tools/macro"
+          icon={<Calculator />}
+          title="Macro split"
+          text="12 preset diet — keto, mediterranean, plant-based, balanced."
+          badge="Gratis"
+        />
+        <ToolCard
+          icon={<Droplet />}
+          title="Hidrasi"
+          text="Goal harian berdasar BB & aktivitas. Notifikasi pintar."
+          badge="Gratis"
+          comingSoon
+        />
+        <ToolCard
+          href="/plan"
+          icon={<Salad />}
+          title="Meal Plan AI"
+          text="AI compose 7 hari · budget warteg · halal default."
+          badge="AI"
+        />
+        <ToolCard
+          href="/workout"
+          icon={<Dumbbell />}
+          title="Workout AI"
+          text="6 goal × 5 split · home/gym · progressive overload."
+          badge="AI"
+        />
+        <ToolCard
+          href="/log"
+          icon={<Camera />}
+          title="Foto Analyzer"
+          text="Foto piring → AI identifikasi item + estimasi porsi + kalori."
+          badge="AI"
+        />
+        <ToolCard
+          icon={<Flame />}
+          title="Streak coach"
+          text="Insight mingguan dari pola makan + workout. AI personal."
+          badge="AI"
+          comingSoon
+        />
       </div>
     </div>
   );
 }
 
-function ToolCard({ tool }: { tool: Tool }) {
-  const inner = (
-    <div
-      className={`relative p-6 rounded-2xl bg-surface border border-border h-full flex flex-col ${
-        tool.comingSoon
-          ? "opacity-60"
-          : "hover:border-brand-300 hover:shadow-lg hover:-translate-y-0.5"
-      } transition-all`}
+function ToolCard({
+  href,
+  icon,
+  title,
+  text,
+  badge,
+  comingSoon,
+}: {
+  href?: string;
+  icon: React.ReactNode;
+  title: string;
+  text: string;
+  badge: "Gratis" | "AI";
+  comingSoon?: boolean;
+}) {
+  const card = (
+    <Card
+      lift={!comingSoon}
+      radius="md"
+      shadow="paper-1"
+      className={`p-5 h-full ${comingSoon ? "opacity-60" : ""}`}
     >
       <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-brand-50 text-brand-600 [&>svg]:w-5 [&>svg]:h-5">
-          {tool.icon}
+        <div className="inline-flex items-center justify-center w-10 h-10 rounded-[10px] bg-forest-50 text-forest [&>svg]:w-5 [&>svg]:h-5">
+          {icon}
         </div>
-        <span
-          className={`text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full ${
-            tool.badge === "AI"
-              ? "bg-accent-100 text-accent-700"
-              : "bg-brand-100 text-brand-700"
-          }`}
-        >
-          {tool.badge}
-        </span>
+        <Pill tone={badge === "AI" ? "clay" : "default"} size="sm">
+          {badge}
+        </Pill>
       </div>
-      <h3 className="font-semibold tracking-tight text-lg">{tool.title}</h3>
-      <p className="mt-2 text-sm text-text-muted leading-relaxed flex-1">
-        {tool.desc}
-      </p>
-      {tool.comingSoon && (
-        <span className="mt-4 text-xs font-semibold text-text-muted">
-          🔜 Segera tersedia
+      <h3 className="font-bold tracking-tight">{title}</h3>
+      <p className="mt-1 text-[12.5px] text-muted leading-relaxed">{text}</p>
+      {comingSoon ? (
+        <span className="mt-3 inline-block text-[10px] font-bold uppercase tracking-wider text-muted">
+          Segera
         </span>
-      )}
-      {!tool.comingSoon && (
-        <span className="mt-4 text-sm font-semibold text-brand-600 inline-flex items-center gap-1">
-          Coba →
-        </span>
-      )}
-    </div>
+      ) : null}
+    </Card>
   );
 
-  if (tool.href && !tool.comingSoon) {
+  if (href && !comingSoon) {
     return (
-      <Link href={tool.href} className="block">
-        {inner}
+      <Link href={href} className="block">
+        {card}
       </Link>
     );
   }
-  return inner;
+  return card;
+}
+
+function TimerPreview() {
+  const size = 220;
+  const stroke = 12;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = 0.77;
+  return (
+    <div
+      className="relative inline-block"
+      style={{ width: size, height: size }}
+    >
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        style={{ transform: "rotate(-90deg)" }}
+      >
+        <defs>
+          <linearGradient id="if-stroke" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--color-clay)" />
+            <stop offset="100%" stopColor="var(--color-sun)" />
+          </linearGradient>
+        </defs>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="var(--color-clay-50)"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="url(#if-stroke)"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - pct)}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <div className="text-[9px] font-bold uppercase tracking-wider text-clay">
+          Fasting
+        </div>
+        <div
+          className="tabular mt-1"
+          style={{ fontFamily: "var(--font-serif)", fontSize: 38, lineHeight: 1 }}
+        >
+          12:22
+        </div>
+        <div className="mt-2">
+          <Pill tone="clay" size="sm">
+            Ketosis ringan
+          </Pill>
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -1,44 +1,65 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import {
-  Timer,
-  ChevronLeft,
-  Info,
-  Utensils,
-  Moon,
-  Zap,
-  TrendingUp,
-} from "lucide-react";
+import { ChevronLeft, Settings, Droplet } from "lucide-react";
 import {
   calculateIFState,
   listIFProtocols,
   type IFProtocol,
   type IFState,
 } from "@/src/nutrition/if-timer";
+import { Pill, Btn, Card, Kicker } from "@/components/ui";
 
-const PROTOCOL_ICONS: Record<IFProtocol, string> = {
-  "16:8": "🌅",
-  "18:6": "⏰",
-  "20:4": "⚔️",
-  OMAD: "🍽️",
-  "5:2": "📅",
-  EatStopEat: "🛑",
-  Ramadan: "🌙",
-};
+const PROTOCOL_LIST: IFProtocol[] = ["16:8", "18:6", "20:4", "OMAD"];
+
+const PHASES: {
+  id:
+    | "fed_state"
+    | "post_absorptive"
+    | "glycogen_depletion"
+    | "ketosis_light"
+    | "ketosis_full"
+    | "autophagy_active"
+    | "extended_fast";
+  label: string;
+  range: string;
+  meaning: string;
+}[] = [
+  { id: "fed_state", label: "Anabolic", range: "0–4 jam", meaning: "Pencernaan & penyimpanan" },
+  { id: "post_absorptive", label: "Glikogen", range: "4–12 jam", meaning: "Pakai cadangan glukosa" },
+  { id: "ketosis_light", label: "Ketosis", range: "12–18 jam", meaning: "Mulai bakar lemak" },
+  { id: "autophagy_active", label: "Autofagi", range: "18–24 jam", meaning: "Sel daur ulang" },
+  { id: "extended_fast", label: "Deep ketosis", range: "24+ jam", meaning: "Produksi keton tinggi" },
+];
+
+function activePhaseIdx(elapsedHours: number): number {
+  if (elapsedHours < 4) return 0;
+  if (elapsedHours < 12) return 1;
+  if (elapsedHours < 18) return 2;
+  if (elapsedHours < 24) return 3;
+  return 4;
+}
+
+function fmtClock(d: Date): string {
+  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+}
+
+function fmtElapsed(h: number): string {
+  const hours = Math.floor(h);
+  const mins = Math.floor((h - hours) * 60);
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
 
 export default function IFPage() {
   const [protocol, setProtocol] = useState<IFProtocol>("16:8");
-  const [startHoursAgo, setStartHoursAgo] = useState("4");
+  const [startHoursAgo, setStartHoursAgo] = useState("12.37");
   const [now, setNow] = useState(() => new Date());
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Live update every 30s
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
-
-  const protocols = useMemo(() => listIFProtocols(), []);
 
   const state: IFState | null = useMemo(() => {
     const hoursAgo = Number.parseFloat(startHoursAgo);
@@ -51,326 +72,373 @@ export default function IFPage() {
     }
   }, [protocol, startHoursAgo, now]);
 
-  return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-      <Link
-        href="/tools"
-        className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-fg mb-6"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        Semua tools
-      </Link>
+  const allProtocols = useMemo(() => listIFProtocols(), []);
 
-      <div className="flex items-start gap-4 mb-8">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-brand-50 text-brand-600">
-          <Timer className="w-6 h-6" />
-        </div>
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            Intermittent Fasting Timer
-          </h1>
-          <p className="mt-1 text-text-muted">
-            7 protokol + metabolic phase tracker real-time.
-          </p>
-        </div>
+  if (!state) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-12">
+        <div className="text-muted">Loading...</div>
+      </div>
+    );
+  }
+
+  const fastHours = state.protocol_def.fast_hours;
+  const eatHours = state.protocol_def.eat_hours;
+  const isFasting = state.state === "fasting";
+  const elapsed = state.elapsed_h_in_state;
+  const targetHours = isFasting ? fastHours : eatHours;
+  const phaseIdx = activePhaseIdx(elapsed);
+  const eatStart = new Date(state.fast_start.getTime() + fastHours * 60 * 60 * 1000);
+
+  // Phase label for pill
+  const phaseLabel = (() => {
+    switch (state.current_phase.phase) {
+      case "fed_state":
+        return "Anabolic";
+      case "post_absorptive":
+        return "Glikogen";
+      case "ketosis_light":
+        return "Ketosis ringan";
+      case "ketosis_full":
+        return "Ketosis penuh";
+      case "autophagy_active":
+        return "Autofagi";
+      case "extended_fast":
+        return "Deep ketosis";
+      default:
+        return state.current_phase.phase.replace(/_/g, " ");
+    }
+  })();
+
+  return (
+    <div className="max-w-md mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      {/* Top bar */}
+      <div className="flex items-center justify-between mb-5">
+        <Link
+          href="/tools"
+          className="w-9 h-9 inline-flex items-center justify-center rounded-full bg-surface-2 hover:bg-surface text-ink border border-hairline"
+          aria-label="Kembali ke tools"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </Link>
+        <h1 className="font-bold tracking-tight">IF Timer</h1>
+        <button
+          onClick={() => setShowSettings((v) => !v)}
+          className="w-9 h-9 inline-flex items-center justify-center rounded-full bg-surface-2 hover:bg-surface text-ink border border-hairline"
+          aria-label="Adjust"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* Protocol selector */}
-      <section className="mb-8">
-        <h2 className="text-sm font-semibold tracking-wide uppercase text-text-muted mb-3">
-          Pilih protokol
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-          {protocols.map((p) => {
-            const active = protocol === p.protocol;
+      {/* Protocol picker */}
+      <div className="mb-6">
+        <div className="bg-surface-2 rounded-full p-1 flex">
+          {PROTOCOL_LIST.map((p) => {
+            const active = protocol === p;
             return (
               <button
-                key={p.protocol}
-                onClick={() => setProtocol(p.protocol)}
-                className={`p-3 rounded-xl text-left border-2 transition-all ${
+                key={p}
+                onClick={() => setProtocol(p)}
+                className={`flex-1 py-2 rounded-full text-[12.5px] font-bold transition-all ${
                   active
-                    ? "border-brand-500 bg-brand-50 dark:bg-brand-500/10"
-                    : "border-border bg-surface hover:border-fg/20"
+                    ? "bg-surface text-ink shadow-[var(--shadow-paper-1)]"
+                    : "text-muted hover:text-ink"
                 }`}
               >
-                <div className="text-xl mb-1">{PROTOCOL_ICONS[p.protocol]}</div>
-                <div className="font-bold text-sm">{p.protocol}</div>
-                {p.fast_hours > 0 && (
-                  <div className="text-[10px] text-text-muted">
-                    {p.fast_hours}h fast
-                  </div>
-                )}
+                {p}
               </button>
             );
           })}
         </div>
-      </section>
+      </div>
 
-      <div className="grid lg:grid-cols-5 gap-6">
-        {/* Inputs */}
-        <section className="lg:col-span-2">
-          <div className="p-6 rounded-2xl bg-surface border border-border space-y-5">
-            <h2 className="font-semibold tracking-tight">Setup</h2>
+      {/* Big circular timer */}
+      <div className="mb-6">
+        <BigTimer
+          elapsed={elapsed}
+          totalHours={targetHours}
+          isFasting={isFasting}
+          phaseLabel={phaseLabel}
+        />
+      </div>
 
-            <Field
-              label="Mulai puasa berapa jam yang lalu?"
-              hint="Hitung dari waktu makanan terakhir kamu (last meal)"
-              suffix="jam"
-            >
-              <input
-                type="number"
-                value={startHoursAgo}
-                onChange={(e) => setStartHoursAgo(e.target.value)}
-                className={inputCls}
-                step="0.25"
-                min={0}
-                max={72}
-              />
-            </Field>
+      {/* 2-col times */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <Card radius="md" shadow="paper-1" className="p-4">
+          <Kicker>Mulai puasa</Kicker>
+          <div
+            className="tabular mt-1"
+            style={{ fontFamily: "var(--font-serif)", fontSize: 28, lineHeight: 1 }}
+          >
+            {fmtClock(state.fast_start)}
+          </div>
+          <div className="text-[11px] text-muted mt-1">
+            {state.fast_start.toDateString() === now.toDateString()
+              ? "hari ini"
+              : "kemarin"}
+            {" · setelah dinner"}
+          </div>
+        </Card>
+        <Card radius="md" shadow="paper-1" className="p-4">
+          <Kicker>Window buka</Kicker>
+          <div
+            className="tabular mt-1"
+            style={{ fontFamily: "var(--font-serif)", fontSize: 28, lineHeight: 1 }}
+          >
+            {fmtClock(eatStart)}
+          </div>
+          <div className="text-[11px] text-muted mt-1">
+            {state.next_transition_label}
+          </div>
+        </Card>
+      </div>
 
-            {/* Quick presets */}
-            <div>
-              <p className="text-xs text-text-muted mb-2">Preset cepat:</p>
-              <div className="flex flex-wrap gap-2">
+      {/* Metabolic phases */}
+      <Card radius="md" shadow="paper-1" className="p-4 sm:p-5 mb-4">
+        <Kicker>Fase metabolik</Kicker>
+        <ul className="mt-3 space-y-2.5">
+          {PHASES.map((ph, i) => {
+            const active = i === phaseIdx;
+            return (
+              <li key={ph.id} className="flex items-center gap-3 text-[13px]">
+                <span
+                  className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                    active
+                      ? "bg-clay ring-4 ring-clay-50"
+                      : i < phaseIdx
+                        ? "bg-forest"
+                        : "bg-hairline-2"
+                  }`}
+                />
+                <span
+                  className={`font-bold ${active ? "text-clay" : i < phaseIdx ? "text-ink" : "text-muted"} min-w-[88px]`}
+                >
+                  {ph.label}
+                </span>
+                <span className="text-muted text-[11.5px] tabular min-w-[64px]">
+                  {ph.range}
+                </span>
+                <span className="text-muted text-[11.5px] text-right flex-1 truncate">
+                  {ph.meaning}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
+
+      {/* Notes (collapsed) */}
+      {state.notes.length > 0 && (
+        <Card radius="md" shadow="paper-1" className="p-4 mb-4 bg-sun-50 border-sun/30">
+          <ul className="space-y-1.5 text-[12.5px] text-ink-2 leading-snug">
+            {state.notes.slice(0, 2).map((n, i) => (
+              <li key={i}>• {n}</li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {/* Footer actions */}
+      <div className="grid grid-cols-[1fr_2fr] gap-3 sticky bottom-24 md:bottom-4">
+        <Btn variant="surface" size="lg" icon={<Droplet />}>
+          Catat air
+        </Btn>
+        <Btn variant="clay" size="lg">
+          {isFasting ? "Buka window sekarang" : "Mulai puasa"}
+        </Btn>
+      </div>
+
+      {/* Settings panel — slide-in style */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4" onClick={() => setShowSettings(false)}>
+          <Card
+            radius="xl"
+            shadow="paper-3"
+            className="w-full sm:max-w-md p-5 sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-bold tracking-tight text-lg mb-1">
+              Atur timer
+            </h2>
+            <p className="text-[12.5px] text-muted mb-4">
+              Set jam terakhir kamu makan biar timer akurat.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-muted block mb-1.5">
+                  Mulai puasa berapa jam yg lalu?
+                </label>
+                <input
+                  type="number"
+                  value={startHoursAgo}
+                  onChange={(e) => setStartHoursAgo(e.target.value)}
+                  step="0.25"
+                  min={0}
+                  max={72}
+                  className="w-full px-3 py-2.5 rounded-[10px] border border-hairline-2 bg-surface focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/15 tabular text-base font-semibold"
+                />
+              </div>
+              <div className="flex flex-wrap gap-1.5">
                 {[2, 4, 8, 12, 16].map((h) => (
                   <button
                     key={h}
                     onClick={() => setStartHoursAgo(String(h))}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg border border-border hover:border-brand-300 hover:bg-brand-50 dark:hover:bg-brand-500/10"
+                    className="px-3 py-1.5 rounded-full border border-hairline text-[11.5px] font-semibold hover:border-forest-300 hover:bg-forest-50"
                   >
-                    {h}h
+                    {h}h lalu
                   </button>
                 ))}
               </div>
-            </div>
-
-            {state && (
-              <div className="pt-4 border-t border-border space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Mulai puasa:</span>
-                  <span className="font-medium tabular-nums">
-                    {state.fast_start.toLocaleString("id-ID", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      day: "2-digit",
-                      month: "short",
-                    })}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Sekarang:</span>
-                  <span className="font-medium tabular-nums">
-                    {state.now.toLocaleString("id-ID", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      day: "2-digit",
-                      month: "short",
-                    })}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-border">
-              <p className="text-xs text-text-muted leading-relaxed">
-                <strong className="text-fg/80">Protokol terpilih:</strong>{" "}
-                {protocols.find((p) => p.protocol === protocol)?.description_id}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Live state */}
-        <section className="lg:col-span-3">
-          {state ? (
-            <div className="space-y-4">
-              {/* Big visual: ring progress */}
-              <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-xl shadow-brand-600/20">
-                <div className="flex flex-col items-center text-center">
-                  <div className="flex items-center gap-1.5 mb-2 text-brand-100 text-sm font-medium">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        state.state === "fasting"
-                          ? "bg-white pulse-soft"
-                          : "bg-accent-300 pulse-soft"
+              <div className="pt-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-muted block mb-2">
+                  Protokol
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {allProtocols.map((p) => (
+                    <button
+                      key={p.protocol}
+                      onClick={() => setProtocol(p.protocol)}
+                      className={`px-2 py-2 rounded-[10px] border-2 text-[11.5px] font-bold ${
+                        protocol === p.protocol
+                          ? "border-clay bg-clay-50 text-clay"
+                          : "border-hairline hover:border-fg/20"
                       }`}
-                    />
-                    {state.state === "fasting" ? "🔵 FASTING" : "🟢 EATING WINDOW"}
-                  </div>
-
-                  <RingProgress
-                    elapsed={state.elapsed_h_in_state}
-                    total={
-                      state.state === "fasting"
-                        ? state.protocol_def.fast_hours
-                        : state.protocol_def.eat_hours
-                    }
-                  />
-
-                  <div className="mt-4 text-sm text-brand-100">
-                    {state.next_transition_label}
-                  </div>
+                    >
+                      {p.protocol}
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              {/* Metabolic phase card */}
-              <div className="p-6 rounded-2xl bg-surface border border-border">
-                <div className="flex items-start gap-3">
-                  <PhaseIcon phase={state.current_phase.phase} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="text-xs font-semibold text-text-muted tracking-wide uppercase">
-                        Metabolic phase
-                      </div>
-                      <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-brand-100 text-brand-700">
-                        {state.current_phase.phase.replace(/_/g, " ")}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm leading-relaxed">
-                      {state.current_phase.description_id}
-                    </p>
-                    {state.next_phase && state.hours_to_next_phase !== null && (
-                      <div className="mt-3 pt-3 border-t border-border text-xs text-text-muted">
-                        <strong className="text-fg/80">Next phase:</strong>{" "}
-                        {state.next_phase.phase.replace(/_/g, " ")} dalam{" "}
-                        <span className="tabular-nums font-semibold text-fg">
-                          {formatHours(state.hours_to_next_phase)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              {state.notes.length > 0 && (
-                <div className="p-5 rounded-2xl bg-amber-50 dark:bg-accent-500/10 border border-accent-200 dark:border-accent-500/20">
-                  <div className="flex items-start gap-2">
-                    <Info className="w-4 h-4 text-accent-600 mt-0.5 flex-shrink-0" />
-                    <ul className="space-y-2 text-sm text-fg/80">
-                      {state.notes.map((n, i) => (
-                        <li key={i}>{n}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
             </div>
-          ) : (
-            <div className="p-12 rounded-2xl bg-surface border border-border text-center">
-              <Timer className="w-12 h-12 text-text-muted mx-auto mb-4" />
-              <p className="text-text-muted">Setup protokol untuk mulai.</p>
+            <div className="mt-5">
+              <Btn variant="primary" size="md" fullWidth onClick={() => setShowSettings(false)}>
+                Selesai
+              </Btn>
             </div>
-          )}
-        </section>
-      </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
 
-// ============ Components ============
-
-function RingProgress({ elapsed, total }: { elapsed: number; total: number }) {
-  const safe = total > 0 ? total : 1;
-  const pct = Math.min(100, (elapsed / safe) * 100);
-  const size = 220;
+function BigTimer({
+  elapsed,
+  totalHours,
+  isFasting,
+  phaseLabel,
+}: {
+  elapsed: number;
+  totalHours: number;
+  isFasting: boolean;
+  phaseLabel: string;
+}) {
+  const size = 280;
   const stroke = 14;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const dash = (pct / 100) * c;
+  const pct = Math.min(1, elapsed / Math.max(totalHours, 0.01));
+  const cx = size / 2;
+  const cy = size / 2;
+  const elapsedSec = Math.floor((elapsed % 1) * 3600) % 60;
+
+  // Generate tick marks (24 per hour cycle = 24 ticks)
+  const ticks = Array.from({ length: 24 }, (_, i) => {
+    const angle = (i / 24) * 2 * Math.PI - Math.PI / 2;
+    const tickLength = i % 6 === 0 ? 7 : 4;
+    const tickWidth = i % 6 === 0 ? 2 : 1;
+    const innerR = r - stroke / 2 - 6;
+    const outerR = innerR + tickLength;
+    return {
+      x1: cx + Math.cos(angle) * innerR,
+      y1: cy + Math.sin(angle) * innerR,
+      x2: cx + Math.cos(angle) * outerR,
+      y2: cy + Math.sin(angle) * outerR,
+      w: tickWidth,
+    };
+  });
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
+    <div
+      className="relative mx-auto"
+      style={{ width: size, height: size }}
+    >
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        style={{ transform: "rotate(-90deg)" }}
+      >
+        <defs>
+          <linearGradient id="if-big-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--color-clay)" />
+            <stop offset="100%" stopColor="var(--color-sun)" />
+          </linearGradient>
+        </defs>
         <circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={cx}
+          cy={cy}
           r={r}
-          stroke="rgba(255,255,255,0.18)"
-          strokeWidth={stroke}
           fill="none"
+          stroke="var(--color-clay-50)"
+          strokeWidth={stroke}
         />
         <circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={cx}
+          cy={cy}
           r={r}
-          stroke="white"
-          strokeWidth={stroke}
           fill="none"
+          stroke="url(#if-big-grad)"
+          strokeWidth={stroke}
           strokeLinecap="round"
-          strokeDasharray={`${dash} ${c}`}
-          className="transition-all duration-500"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - pct)}
+          style={{ transition: "stroke-dashoffset 500ms ease" }}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-5xl font-bold tabular-nums">
-          {formatHoursShort(elapsed)}
+      {/* Ticks layer (not rotated) */}
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="absolute inset-0 pointer-events-none"
+      >
+        {ticks.map((t, i) => (
+          <line
+            key={i}
+            x1={t.x1}
+            y1={t.y1}
+            x2={t.x2}
+            y2={t.y2}
+            stroke="var(--color-clay)"
+            strokeWidth={t.w}
+            opacity={0.55}
+            strokeLinecap="round"
+          />
+        ))}
+      </svg>
+      {/* Center content */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-clay tabular">
+          {isFasting ? "Fasting" : "Eating"} ·{" "}
+          <span className="tabular">{totalHours.toFixed(0)}:00 jam</span>
         </div>
-        <div className="text-xs text-brand-100 mt-1">
-          dari {total}h target
+        <div
+          className="tabular mt-1"
+          style={{ fontFamily: "var(--font-serif)", fontSize: 56, lineHeight: 1 }}
+        >
+          {fmtElapsed(elapsed)}
         </div>
-        <div className="text-xs font-bold mt-2 tabular-nums">
-          {pct.toFixed(0)}%
+        <div className="text-[11px] text-muted mt-1 tabular">
+          :{String(elapsedSec).padStart(2, "0")} detik
+        </div>
+        <div className="mt-3">
+          <Pill tone="clay" size="md">
+            {phaseLabel}
+          </Pill>
         </div>
       </div>
-    </div>
-  );
-}
-
-function PhaseIcon({ phase }: { phase: string }) {
-  const map: Record<string, React.ReactNode> = {
-    fed_state: <Utensils className="w-6 h-6 text-accent-500" />,
-    post_absorptive: <Utensils className="w-6 h-6 text-amber-500" />,
-    glycogen_depletion: <Zap className="w-6 h-6 text-orange-500" />,
-    ketosis_light: <Zap className="w-6 h-6 text-rose-500" />,
-    ketosis_full: <Zap className="w-6 h-6 text-rose-600" />,
-    autophagy_active: <TrendingUp className="w-6 h-6 text-brand-600" />,
-    extended_fast: <Moon className="w-6 h-6 text-fg" />,
-  };
-  return (
-    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-surface-muted flex-shrink-0">
-      {map[phase] ?? <Timer className="w-6 h-6 text-text-muted" />}
-    </div>
-  );
-}
-
-function formatHours(h: number): string {
-  const hours = Math.floor(h);
-  const mins = Math.round((h - hours) * 60);
-  return `${hours}h ${mins}m`;
-}
-
-function formatHoursShort(h: number): string {
-  const hours = Math.floor(h);
-  const mins = Math.round((h - hours) * 60);
-  const mm = String(mins).padStart(2, "0");
-  return `${hours}:${mm}`;
-}
-
-const inputCls =
-  "w-full px-3 py-2.5 rounded-lg border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 tabular-nums";
-
-function Field({
-  label,
-  hint,
-  suffix,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  suffix?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="flex items-center justify-between text-sm font-medium mb-1.5">
-        <span>{label}</span>
-        {suffix && <span className="text-xs text-text-muted">{suffix}</span>}
-      </label>
-      {children}
-      {hint && (
-        <p className="mt-1 text-xs text-text-muted leading-snug">{hint}</p>
-      )}
     </div>
   );
 }
