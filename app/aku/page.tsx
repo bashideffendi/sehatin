@@ -210,8 +210,16 @@ export default function AkuPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 pb-12 space-y-4">
       {/* ============ Profile header card ============ */}
-      <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6">
-        <div className="flex items-start gap-4 sm:gap-5">
+      <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6 relative overflow-hidden paper-grain">
+        {/* Subtle sun wash from top-right (matches IF Timer pattern) */}
+        <span
+          className="absolute -top-20 -right-20 w-72 h-72 rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(245,206,90,0.22) 0%, transparent 70%)",
+          }}
+        />
+        <div className="relative z-10 flex items-start gap-4 sm:gap-5">
           {/* Avatar */}
           <div className="flex-shrink-0 w-[72px] h-[72px] sm:w-20 sm:h-20 rounded-2xl bg-forest text-paper inline-flex items-center justify-center">
             <span
@@ -264,7 +272,7 @@ export default function AkuPage() {
         </div>
 
         {/* 4-stat row */}
-        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="relative z-10 mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <StatTile
             label="Berat"
             value={profile.weight_kg != null ? profile.weight_kg.toFixed(1).replace(".", ",") : "—"}

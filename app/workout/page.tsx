@@ -421,8 +421,16 @@ export default function WorkoutPage() {
       )}
 
       {/* ============ Top stats card ============ */}
-      <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6 mb-5">
-        <div className="flex items-center gap-5 flex-wrap">
+      <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6 mb-5 relative overflow-hidden paper-grain">
+        {/* Subtle forest accent from bottom-right */}
+        <span
+          className="absolute -bottom-16 -right-16 w-56 h-56 rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(31,77,63,0.10) 0%, transparent 70%)",
+          }}
+        />
+        <div className="relative z-10 flex items-center gap-5 flex-wrap">
           <Donut
             value={completedSessions}
             target={totalSessions || 1}
