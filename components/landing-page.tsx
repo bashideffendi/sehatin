@@ -43,11 +43,19 @@ export function LandingPage() {
               Cara kerja
             </a>
           </nav>
-          <Link href="/onboarding">
-            <Btn variant="primary" size="sm" iconRight={<ArrowRight />}>
-              Mulai quiz
-            </Btn>
-          </Link>
+          <div className="inline-flex items-center gap-2">
+            <Link
+              href="/login"
+              className="hidden sm:inline-flex px-3 py-2 rounded-full text-[13px] font-semibold text-muted hover:text-ink"
+            >
+              Login
+            </Link>
+            <Link href="/login">
+              <Btn variant="primary" size="sm" iconRight={<ArrowRight />}>
+                Mulai
+              </Btn>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -103,7 +111,7 @@ export function LandingPage() {
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Btn variant="primary" size="lg" iconRight={<ArrowRight />}>
-                <Link href="/onboarding" className="contents">
+                <Link href="/login" className="contents">
                   Mulai quiz
                 </Link>
               </Btn>
@@ -244,7 +252,7 @@ export function LandingPage() {
 
           <div className="mt-12">
             <Btn variant="clay" size="lg" iconRight={<ArrowRight />}>
-              <Link href="/onboarding" className="contents">
+              <Link href="/login" className="contents">
                 Mulai quiz
               </Link>
             </Btn>
@@ -348,7 +356,7 @@ export function LandingPage() {
                   size="lg"
                   iconRight={<ArrowRight />}
                 >
-                  <Link href="/onboarding" className="contents">
+                  <Link href="/login" className="contents">
                     Mulai sekarang
                   </Link>
                 </Btn>

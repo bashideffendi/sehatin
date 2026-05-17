@@ -4,7 +4,8 @@ import { LandingPage } from "@/components/landing-page";
 import { Dashboard } from "@/components/dashboard";
 import { ProfileBlockingModal } from "@/components/profile-blocking-modal";
 import { loadProfile, type UserProfile } from "@/lib/profile";
-import { hasEnteredApp } from "@/lib/session";
+import { createClient } from "@/lib/supabase/client";
+import { migrateLocalStorageToSupabase } from "@/lib/supabase/migrate-from-localstorage";
 
 const REQUIRED_FIELDS: (keyof UserProfile)[] = [
   "age",
@@ -25,13 +26,32 @@ function isProfileComplete(p: UserProfile | null): p is UserProfile {
 
 export default function HomePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [entered, setEntered] = useState(false);
+  const [authed, setAuthed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setProfile(loadProfile());
-    setEntered(hasEnteredApp());
-    setHydrated(true);
+    (async () => {
+      // Check real Supabase auth session
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const isAuthed = !!user;
+      setAuthed(isAuthed);
+
+      // If authed AND there's localStorage data, run one-time migration
+      if (isAuthed) {
+        try {
+          await migrateLocalStorageToSupabase();
+        } catch (e) {
+          console.warn("[home] migration failed (non-fatal)", e);
+        }
+      }
+
+      // Load profile (still from localStorage for now — Phase 2 will switch to Supabase queries)
+      setProfile(loadProfile());
+      setHydrated(true);
+    })();
   }, []);
 
   // Blank during hydration to avoid landing-flash for returning users
@@ -39,26 +59,22 @@ export default function HomePage() {
     return <div className="min-h-[60vh]" aria-hidden />;
   }
 
-  // 1. Belum pernah masuk app → Landing
-  if (!entered) {
+  // 1. Not authenticated → Landing
+  if (!authed) {
     return <LandingPage />;
   }
 
-  // 2. Udah masuk + profile complete → Dashboard normal
+  // 2. Authed + profile complete → Dashboard normal
   if (isProfileComplete(profile)) {
     return <Dashboard profile={profile} />;
   }
 
-  // 3. Udah masuk tapi profile belum lengkap → Dashboard skeleton + blocking modal
+  // 3. Authed but profile incomplete → Dashboard skeleton + blocking modal
   return (
     <>
-      {/* Render dashboard with empty profile as visual backdrop (blurred by modal) */}
       <div className="pointer-events-none select-none opacity-40">
         <Dashboard
-          profile={
-            // Stub profile dengan minimal placeholder field biar Dashboard ga crash
-            (profile ?? { v: 2, name: "kamu" }) as UserProfile
-          }
+          profile={(profile ?? { v: 2, name: "kamu" }) as UserProfile}
         />
       </div>
       <ProfileBlockingModal />

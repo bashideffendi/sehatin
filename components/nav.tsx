@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { DesktopSidebar, MobileTabBar } from "@/components/ui";
 import { loadProfile, type UserProfile } from "@/lib/profile";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Global nav orchestrator.
@@ -11,33 +12,50 @@ import { loadProfile, type UserProfile } from "@/lib/profile";
  *   their own page-level top header (greeting / title) inline.
  *
  * NOT shown on:
- * - Marketing landing page (`/` without profile) — landing has its own top nav
+ * - Marketing landing page (`/` when not authed) — landing has its own top nav
+ * - Login (`/login`) — full-screen login form
+ * - Auth (`/auth/*`) — callback handlers
  * - Onboarding flow (`/onboarding`) — WizardShell provides its own chrome
+ * - Preview (`/preview/*`) — design review pages
  */
-function isInAppPath(pathname: string, hasProfile: boolean): boolean {
-  // Onboarding always uses WizardShell — no sidebar/tabbar
+function isInAppPath(pathname: string, authed: boolean): boolean {
   if (pathname.startsWith("/onboarding")) return false;
-  // Marketing landing preview — always hide sidebar
   if (pathname.startsWith("/preview")) return false;
-  // Landing page = `/` without a profile (otherwise it's the dashboard)
-  if (pathname === "/" && !hasProfile) return false;
+  if (pathname.startsWith("/login")) return false;
+  if (pathname.startsWith("/auth")) return false;
+  // Landing = `/` when not authenticated
+  if (pathname === "/" && !authed) return false;
   return true;
 }
 
 export function Nav() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [authed, setAuthed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
-    setProfile(loadProfile());
-    setMounted(true);
+    (async () => {
+      // Check Supabase auth + load profile (still localStorage for now)
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        setAuthed(!!user);
+      } catch {
+        // Supabase env not configured — fall back to no-auth (dev)
+        setAuthed(false);
+      }
+      setProfile(loadProfile());
+      setMounted(true);
+    })();
   }, []);
 
-  // Avoid hydration mismatch — render nothing until we know profile state
+  // Avoid hydration mismatch — render nothing until we know auth state
   if (!mounted) return null;
 
-  if (!isInAppPath(pathname ?? "/", !!profile)) return null;
+  if (!isInAppPath(pathname ?? "/", authed)) return null;
 
   const user = profile
     ? {
