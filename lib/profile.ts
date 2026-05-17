@@ -113,6 +113,13 @@ export type SnackTime = "morning" | "afternoon" | "evening" | "late_night" | "ra
 // Pace preference
 export type PacePreference = "as_fast_possible" | "slow_steady" | "in_between";
 
+// Mode khusus — contextual states that adjust meal/workout plan generation
+export type ModeKhusus =
+  | "ramadan" // sahur-buka window, low-intensity workout
+  | "kondangan_recovery" // recovering from over-eating event, plan defisit
+  | "dinas" // perjalanan dinas, limited food choices, hotel/airport
+  | "cheat_day"; // intentional cheat, plan minim restriction
+
 // Medical conditions — important untuk Indonesia (komorbid umum)
 export type MedicalCondition =
   | "hipertensi"
@@ -214,6 +221,7 @@ export interface UserProfile {
   budget_idr_per_day?: number;
   province_id?: number | "national"; // PIHPS lookup
   equipment_available?: Equipment[];
+  active_modes?: ModeKhusus[]; // Ramadan / Kondangan recovery / Dinas / Cheat day
 
   // ===== META =====
   completed_at?: string;

@@ -124,7 +124,29 @@ export async function POST(req: Request) {
     budget_idr_per_day: profile.budget_idr_per_day,
     diet_method: profile.diet_method,
     meals_per_day: body.meals_per_day ?? 3,
-    context_notes: body.context_notes,
+    context_notes: [
+      body.context_notes,
+      profile.active_modes && profile.active_modes.length > 0
+        ? `Mode khusus aktif: ${profile.active_modes
+            .map((m) => {
+              switch (m) {
+                case "ramadan":
+                  return "Ramadan (sahur-buka eating window, no food during day)";
+                case "kondangan_recovery":
+                  return "Kondangan recovery (pulih dari over-eating event, plan ringan defisit)";
+                case "dinas":
+                  return "Dinas / business trip (food choices terbatas hotel/airport)";
+                case "cheat_day":
+                  return "Cheat day (hari ini sengaja over, plan minim restriction)";
+                default:
+                  return m;
+              }
+            })
+            .join("; ")}.`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" "),
     preferences: {
       halal: profile.preferences?.halal ?? true,
       vegetarian: profile.preferences?.vegetarian,

@@ -29,6 +29,9 @@ import type { Sex, ActivityLevel, Goal } from "@/src/nutrition/tdee";
 import type { DietMethod } from "@/src/nutrition/diet-methods";
 import type { Equipment } from "@/src/fitness/exercises";
 import { cn } from "@/lib/utils";
+import { Kicker } from "@/components/ui";
+import { PlusCard } from "@/components/plus-card";
+import { ModeKhususCard } from "@/components/mode-khusus-card";
 
 // ============ Option labels ============
 
@@ -321,14 +324,26 @@ export default function SettingsPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 pb-12">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Settings className="w-6 h-6 text-text-muted" />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            Pengaturan
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <Kicker>Profil</Kicker>
+          <h1 className="mt-2 text-3xl sm:text-[40px] font-extrabold tracking-tight leading-[1.05]">
+            {profile.name ?? "Profil"}{" "}
+            <span
+              className="font-normal italic text-forest"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
+              kamu.
+            </span>
           </h1>
         </div>
         <SaveIndicator saving={saving} savedAt={savedAt} />
+      </div>
+
+      {/* Mode khusus + Plus tier — sticky context cards at top */}
+      <div className="space-y-4 mb-6">
+        <ModeKhususCard />
+        <PlusCard />
       </div>
 
       {/* Section: Profil dasar */}
