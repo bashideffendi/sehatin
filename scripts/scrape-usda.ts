@@ -12,6 +12,7 @@
  * Tanpa API key, pake DEMO_KEY (30 req/hour limit).
  * Daftar API key gratis: https://api.data.gov/signup/
  */
+import "dotenv/config";
 import { getDb, getDbPath } from "../src/db/client.ts";
 import { createSchema } from "../src/db/schema.ts";
 import { scrapeUsda } from "../src/scrapers/usda.ts";
