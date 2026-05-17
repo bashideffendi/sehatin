@@ -158,21 +158,37 @@ export async function POST(req: Request) {
   };
 
   let db;
+  let dbPath = "unknown";
   try {
     db = await getDbAsync();
+    // Immediate smoke test — surface if query fails right after open
+    try {
+      const row = db.prepare("SELECT COUNT(*) as n FROM foods").get() as {
+        n: number;
+      };
+      console.log("[/api/plan] DB OK, foods count:", row.n);
+    } catch (qe) {
+      throw new Error(
+        `Query after open failed: ${(qe as Error).message} (path: ${dbPath})`,
+      );
+    }
   } catch (e) {
-    const msg = (e as Error).message;
-    console.error("[/api/plan] DB resolve failed:", msg);
+    const err = e as Error;
+    const msg = err.message;
+    const stack = err.stack ?? "";
+    console.error("[/api/plan] DB init/smoke failed:", msg, stack);
     return NextResponse.json(
       {
         ok: false,
         error: `DB init: ${msg}`,
+        stack: stack.slice(0, 800),
         debug: {
           cwd: process.cwd(),
           vercel_url: process.env.VERCEL_URL ?? null,
           vercel_project_production_url:
             process.env.VERCEL_PROJECT_PRODUCTION_URL ?? null,
           db_path_env: process.env.DB_PATH ?? null,
+          err_name: err.name,
         },
       },
       { status: 500 },
