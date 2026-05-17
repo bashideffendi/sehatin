@@ -95,8 +95,9 @@ export function LandingPage() {
             </h1>
 
             <p className="mt-5 text-[15px] sm:text-base text-muted leading-relaxed max-w-md">
-              Plan makan dan latihan dari profil, alergi, kondisi medis, dan
-              budget — pakai data resmi TKPI Kemenkes.
+              Plan makan dari kondisi kamu — alergi, hipertensi, budget, jadwal
+              kerja. Buat orang Indonesia yang gak mau dietnya bingung liat
+              nasi padang.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -107,7 +108,7 @@ export function LandingPage() {
               </Btn>
               <Btn variant="ghost" size="lg">
                 <Link href="/tools" className="contents">
-                  Lihat tools
+                  Coba tools dulu
                 </Link>
               </Btn>
             </div>
@@ -116,7 +117,7 @@ export function LandingPage() {
             <div className="mt-4 inline-flex items-center gap-2 flex-wrap">
               <DemoButton size="sm" variant="clay" redirectTo="/log" />
               <span className="text-[11px] text-muted">
-                Skip onboarding · Bashid persona · 7-day plan + 30d weight + workout
+                Skip quiz · langsung liat plan jadinya kayak gimana
               </span>
             </div>
 
@@ -127,7 +128,7 @@ export function LandingPage() {
                   className="serif text-2xl tabular"
                   style={{ fontFamily: "var(--font-serif)" }}
                 >
-                  1.146
+                  2.015
                 </span>{" "}
                 <span className="text-muted">makanan</span>
               </span>
@@ -174,8 +175,8 @@ export function LandingPage() {
               </span>
             </h2>
             <p className="mt-3 text-muted">
-              Database TKPI Kemenkes, harga real PIHPS Bank Indonesia,
-              komposisi gizi pas buat warteg dan padang.
+              MyFitnessPal gak punya rendang. Apps bule gak ngerti porsi
+              warteg. Kita bikin yang sesuai.
             </p>
           </div>
 
@@ -184,22 +185,22 @@ export function LandingPage() {
               icon={<Wallet className="w-5 h-5" />}
               tone="forest"
               numeral="01"
-              title="Budget warteg"
-              text="Set budget makan harian. AI compose plan pakai harga pasar real-time PIHPS BI, 33 provinsi. Tahu beda harga ayam Jakarta vs Manado."
+              title="Plan se-budget kamu"
+              text="Tulis budget harian. Plan ngitung pake harga pasar 33 provinsi. Ayam di Jakarta vs Manado beda, jadi pake yang real."
             />
             <ValueCard
               icon={<CookingPot className="w-5 h-5" />}
               tone="clay"
               numeral="02"
-              title="Komposisi lokal"
-              text="Rendang, gado-gado, soto, nasi padang — semua punya nilai gizi akurat dari TKPI Kemenkes resmi. Bukan tebakan dari database asing."
+              title="Gizi yang bener"
+              text="Rendang, gado-gado, soto — angka gizinya dari TKPI Kemenkes. Bukan ngarang. Bukan terjemahan dari beef stew."
             />
             <ValueCard
               icon={<Camera className="w-5 h-5" />}
               tone="sky"
               numeral="03"
-              title="Foto, beres"
-              text="Foto piring kamu. AI identifikasi tiap lauk, estimasi porsi, hitung total kalori. Termasuk makanan rumah dan warung yang gak ada di database manapun."
+              title="Foto piring, selesai"
+              text="Lagi makan di warung yang gak ada di mana-mana? Foto aja. AI baca tiap lauk + porsi, langsung masuk catatan."
             />
           </div>
         </div>
@@ -226,17 +227,17 @@ export function LandingPage() {
             <ProcessStep
               n="01"
               title="Quiz"
-              text="Jawab 40+ pertanyaan singkat: usia, target, kondisi medis, alergi, budget, jadwal."
+              text="40+ pertanyaan singkat. Usia, target, kondisi medis, alergi, budget, jam kerja — yang bener-bener ngaruh."
             />
             <ProcessStep
               n="02"
               title="Compose"
-              text="AI baca profil + harga lokal + komposisi TKPI, lalu compose meal plan & workout pertama kamu."
+              text="AI baca profil kamu + harga pasar + gizi TKPI. Meal plan + workout langsung jadi, gak perlu mikir."
             />
             <ProcessStep
               n="03"
               title="Live track"
-              text="Catat makan harian dengan foto, search, atau manual. Plan vs realisasi side-by-side."
+              text="Catat makan via foto, search, atau manual. Liat plan vs apa yang beneran masuk perut — side-by-side."
             />
           </div>
 
@@ -257,10 +258,10 @@ export function LandingPage() {
             <div>
               <Kicker>Tools</Kicker>
               <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">
-                Tools yang tersedia
+                Pake yang kamu butuh.
               </h2>
               <p className="mt-2 text-muted">
-                Dari kalkulator dasar sampai AI generator.
+                Gak perlu daftar buat hitung BMI atau jalanin IF Timer.
               </p>
             </div>
             <Link
@@ -276,42 +277,42 @@ export function LandingPage() {
               href="/tools/tdee"
               icon={<Calculator />}
               title="TDEE & Macro"
-              text="Kebutuhan kalori harian, macro split via Mifflin-St Jeor."
+              text="Berapa kalori sih kebutuhan harian kamu? Pakai Mifflin-St Jeor."
               badge="Gratis"
             />
             <ToolMini
               href="/tools/macro"
               icon={<Calculator />}
-              title="Macro Calculator"
-              text="Konversi kalori ke gram makro. 12 preset diet siap pakai."
+              title="Macro split"
+              text="Kalori jadi gram protein/lemak/karbo. 12 preset diet siap pakai."
               badge="Gratis"
             />
             <ToolMini
               href="/tools/bmi"
               icon={<Activity />}
               title="BMI Asia-Pacific"
-              text="Cut-off Kemenkes RI plus lingkar pinggang."
+              text="Cut-off Kemenkes. Plus lingkar pinggang buat obesitas sentral."
               badge="Gratis"
             />
             <ToolMini
               href="/tools/if"
               icon={<Timer />}
               title="IF Timer"
-              text="7 protokol intermittent fasting plus tracker fase metabolik."
+              text="7 protokol puasa. Tracker fase metabolik glikogen → ketosis."
               badge="Gratis"
             />
             <ToolMini
               href="/plan"
               icon={<Salad />}
               title="Meal Plan AI"
-              text="12 metode diet plus budget-aware compose dari TKPI + PIHPS."
+              text="12 metode diet. AI compose sesuai budget + kondisi kamu."
               badge="AI"
             />
             <ToolMini
               href="/workout"
               icon={<Dumbbell />}
-              title="Workout Program AI"
-              text="6 goal × 5 split + progressive overload. Equipment-aware."
+              title="Workout AI"
+              text="6 goal × 5 split. Equipment-aware, progressive overload."
               badge="AI"
             />
           </div>
@@ -324,7 +325,7 @@ export function LandingPage() {
           <Card surface="ink" radius="xl" shadow="paper-2">
             <div className="p-8 sm:p-12 text-paper">
               <div className="max-w-2xl">
-                <Kicker tone="paper">Siap mulai</Kicker>
+                <Kicker tone="paper">Yuk mulai</Kicker>
                 <h2 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
                   Quiz{" "}
                   <span
@@ -336,7 +337,8 @@ export function LandingPage() {
                   .
                 </h2>
                 <p className="mt-3 text-paper/80">
-                  Plan langsung jalan. Gak butuh kartu kredit.
+                  Plan langsung jadi. Gak ada kartu kredit, gak ada trial 7
+                  hari, gak ada email konfirmasi.
                 </p>
               </div>
               <div className="mt-6">

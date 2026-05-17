@@ -17,6 +17,8 @@ import { loadProfile, type UserProfile } from "@/lib/profile";
 function isInAppPath(pathname: string, hasProfile: boolean): boolean {
   // Onboarding always uses WizardShell — no sidebar/tabbar
   if (pathname.startsWith("/onboarding")) return false;
+  // Marketing landing preview — always hide sidebar
+  if (pathname.startsWith("/preview")) return false;
   // Landing page = `/` without a profile (otherwise it's the dashboard)
   if (pathname === "/" && !hasProfile) return false;
   return true;
