@@ -274,9 +274,9 @@ export default function LogPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 pb-32">
-      {/* Date nav */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
+      {/* Date nav + streak chip */}
+      <div className="flex items-center justify-between mb-5 gap-3">
+        <div className="min-w-0">
           <Kicker>Catatan harian</Kicker>
           <DatePopover
             value={date}
@@ -299,7 +299,12 @@ export default function LogPage() {
             </h1>
           </DatePopover>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {streak > 0 && (
+            <Pill tone="clay" size="md" icon={<Flame className="w-3 h-3" />}>
+              <span className="tabular">{streak}</span> hari
+            </Pill>
+          )}
           <button
             onClick={() => setDate(shiftDate(date, -1))}
             className="w-9 h-9 rounded-full bg-surface-2 hover:bg-surface text-ink border border-hairline flex items-center justify-center"

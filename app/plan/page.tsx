@@ -40,6 +40,7 @@ import {
 } from "@/lib/food-log";
 import { calculateTargets } from "@/src/nutrition/tdee";
 import { AddFoodModal } from "@/components/add-food-modal";
+import { ShoppingListCard } from "@/components/shopping-list-card";
 import { cn, fmtNum } from "@/lib/utils";
 
 const REQUIRED_FIELDS: (keyof UserProfile)[] = [
@@ -441,6 +442,11 @@ export default function PlanPage() {
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
+      </div>
+
+      {/* Shopping list (collapsible) */}
+      <div className="mb-4">
+        <ShoppingListCard plan={plan} />
       </div>
 
       {/* Day tabs */}
