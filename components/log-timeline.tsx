@@ -115,7 +115,7 @@ export function LogTimeline({
         <ol className="relative">
           {/* Vertical dotted line */}
           <div
-            className="absolute left-[34px] top-2 bottom-2 border-l-2 border-dashed border-hairline-2 pointer-events-none"
+            className="absolute left-[56px] top-2 bottom-2 border-l-2 border-dashed border-hairline-2 pointer-events-none"
             aria-hidden
           />
           {sorted.map((entry) => (
@@ -199,14 +199,14 @@ function TimelineRow({
   onLogPlanned?: () => void;
 }) {
   return (
-    <li className="relative pl-[68px] pr-1 py-2 group">
-      {/* Time label */}
-      <span className="absolute left-0 top-3 text-[11px] font-bold tabular text-muted w-[30px] text-right">
+    <li className="relative pl-[82px] pr-1 py-2 group">
+      {/* Time label — widened from 30px → 42px so HH:MM doesn't get clipped */}
+      <span className="absolute left-0 top-3 text-[11px] font-bold tabular text-muted w-[42px] text-right">
         {time || "—"}
       </span>
-      {/* Dot anchor on the line */}
+      {/* Dot anchor on the line — shifted right to clear time label */}
       <span
-        className={`absolute left-[30px] top-3.5 w-2 h-2 rounded-full ring-4 ring-paper ${
+        className={`absolute left-[52px] top-3.5 w-2 h-2 rounded-full ring-4 ring-paper ${
           isPlanned
             ? "bg-clay"
             : source === "photo"
