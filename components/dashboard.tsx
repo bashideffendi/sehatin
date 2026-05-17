@@ -37,6 +37,7 @@ import {
 } from "@/lib/weight-log";
 import { getWeekInsights, getStreak } from "@/lib/insights";
 import { Pill, Btn, Card, Kicker, Donut, BarChart, Sparkline } from "@/components/ui";
+import { CoachInsight } from "@/components/coach-insight";
 import { fmtKcal, rupiah } from "@/lib/format";
 
 function timeOfDayGreeting(): string {
@@ -293,6 +294,11 @@ export function Dashboard({ profile }: Props) {
           nextSession={nextSession}
           progress={workoutProgress}
         />
+      </div>
+
+      {/* ============ Coach insight ============ */}
+      <div className="mb-4">
+        <CoachInsight targetKcal={kcalTarget} />
       </div>
 
       {/* ============ Weekly chart + Weight ============ */}
