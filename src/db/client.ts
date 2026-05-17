@@ -1,26 +1,63 @@
 import Database from "better-sqlite3";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-export function getDb(path: string): Database.Database {
-  // Skip mkdirSync on read-only filesystems (Vercel runtime)
-  try {
-    mkdirSync(dirname(path), { recursive: true });
-  } catch {
-    /* ignore — read-only fs is fine for read-only DB */
+export interface DbOptions {
+  /** Open in read-only mode. Required on Vercel (read-only filesystem). */
+  readonly?: boolean;
+}
+
+export function getDb(path: string, opts: DbOptions = {}): Database.Database {
+  // Auto-detect readonly mode if path is under public/ (Vercel-bundled assets)
+  // or explicitly opted in via opts.readonly.
+  const readonly =
+    opts.readonly ??
+    (path.includes("/public/") || path.includes("\\public\\"));
+
+  if (!readonly) {
+    try {
+      mkdirSync(dirname(path), { recursive: true });
+    } catch {
+      /* ignore on read-only fs */
+    }
   }
-  const db = new Database(path, { readonly: false, fileMustExist: false });
-  try {
-    db.pragma("journal_mode = WAL");
-    db.pragma("foreign_keys = ON");
-  } catch {
-    /* journal_mode may fail on read-only fs — fall through */
+
+  const db = new Database(path, {
+    readonly,
+    fileMustExist: readonly,
+  });
+
+  if (!readonly) {
+    try {
+      db.pragma("journal_mode = WAL");
+      db.pragma("foreign_keys = ON");
+    } catch {
+      /* ignore */
+    }
+  } else {
+    try {
+      db.pragma("foreign_keys = ON");
+    } catch {
+      /* ignore */
+    }
   }
   return db;
 }
 
+/**
+ * Resolve the canonical DB path.
+ * Priority:
+ *  1. DB_PATH env (explicit override)
+ *  2. public/sehatin.db if exists (Vercel runtime — auto-bundled)
+ *  3. data/sehatin.db (local dev default for write workflows)
+ */
 export function getDbPath(): string {
   if (process.env.DB_PATH) return process.env.DB_PATH;
-  // Absolute path keyed off cwd so Vercel serverless / Node both resolve correctly
+  const publicPath = join(process.cwd(), "public", "sehatin.db");
+  try {
+    if (existsSync(publicPath)) return publicPath;
+  } catch {
+    /* ignore */
+  }
   return join(process.cwd(), "data", "sehatin.db");
 }
