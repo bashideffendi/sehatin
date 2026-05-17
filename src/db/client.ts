@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import type DatabaseType from "better-sqlite3";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
@@ -8,7 +8,20 @@ export interface DbOptions {
   readonly?: boolean;
 }
 
-export function getDb(path: string, opts: DbOptions = {}): Database.Database {
+// Synchronous open — for local scripts (db-init, import-*) where the native
+// module is loaded at startup. Production code paths use openDbAsync.
+let _SyncDatabase: typeof DatabaseType | null = null;
+function loadSyncDatabase(): typeof DatabaseType {
+  if (_SyncDatabase) return _SyncDatabase;
+  // Use require to lazily resolve — Turbopack bundles native modules differently
+  // depending on whether the import is static or dynamic. require lets Node
+  // resolve at runtime against serverExternalPackages.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  _SyncDatabase = require("better-sqlite3") as typeof DatabaseType;
+  return _SyncDatabase;
+}
+
+export function getDb(path: string, opts: DbOptions = {}): DatabaseType.Database {
   // Auto-detect readonly mode based on path location.
   // public/ + /tmp are read-only / cache locations — never write.
   // data/ is the local dev write location.
@@ -27,6 +40,7 @@ export function getDb(path: string, opts: DbOptions = {}): Database.Database {
     }
   }
 
+  const Database = loadSyncDatabase();
   const db = new Database(path, {
     readonly,
     fileMustExist: readonly,
@@ -164,8 +178,41 @@ export async function resolveDbPath(): Promise<string> {
   );
 }
 
-/** Convenience: resolve path + open DB in one async call. */
-export async function getDbAsync(): Promise<Database.Database> {
+/**
+ * Convenience: resolve path + open DB in one async call.
+ * Uses dynamic import so Turbopack handles the native module load via
+ * runtime resolution (serverExternalPackages) rather than static bundling.
+ */
+export async function getDbAsync(): Promise<DatabaseType.Database> {
   const path = await resolveDbPath();
-  return getDb(path);
+  const mod = await import("better-sqlite3");
+  const Database = mod.default;
+
+  const isReadonlyLocation =
+    path.includes("/public/") ||
+    path.includes("\\public\\") ||
+    path.startsWith(tmpdir()) ||
+    path.includes("/tmp/");
+  const readonly = isReadonlyLocation;
+
+  if (!readonly) {
+    try {
+      mkdirSync(dirname(path), { recursive: true });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const db = new Database(path, {
+    readonly,
+    fileMustExist: readonly,
+  });
+
+  try {
+    if (!readonly) db.pragma("journal_mode = WAL");
+    db.pragma("foreign_keys = ON");
+  } catch {
+    /* ignore */
+  }
+  return db;
 }
