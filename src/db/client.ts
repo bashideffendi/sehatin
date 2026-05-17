@@ -110,13 +110,21 @@ export async function resolveDbPath(): Promise<string> {
   }
 
   // Vercel Deployment Protection gates BOTH VERCEL_URL (deployment-specific)
-  // AND VERCEL_PROJECT_PRODUCTION_URL (sehatin-bashideffendi.vercel.app) with
-  // 401. Only the random-hash production alias (e.g. sehatin-tan.vercel.app)
-  // is public by default. Try several URLs in order — accept the first 200.
+  // AND VERCEL_PROJECT_PRODUCTION_URL with 401. Some random-hash aliases
+  // (e.g. sehatin-tan.vercel.app) might be public, but unreliable.
+  //
+  // Most reliable source: raw.githubusercontent.com which has NO auth and
+  // is always public for public repos. The DB file is committed to the
+  // repo at public/sehatin.db. Fetch that as the primary source.
   const candidateUrls: string[] = [];
   if (process.env.SEHATIN_DB_BASE_URL) {
     candidateUrls.push(`${process.env.SEHATIN_DB_BASE_URL}/sehatin.db`);
   }
+  // Primary: GitHub raw (always public for public repos, no Vercel gating)
+  candidateUrls.push(
+    "https://raw.githubusercontent.com/bashideffendi/sehatin/main/public/sehatin.db",
+  );
+  // Fallbacks (Vercel-hosted URLs — may be auth-gated)
   if (process.env.NEXT_PUBLIC_BASE_URL) {
     candidateUrls.push(`${process.env.NEXT_PUBLIC_BASE_URL}/sehatin.db`);
   }
