@@ -1,5 +1,9 @@
 /**
- * Weight log — localStorage CRUD untuk weight tracking.
+ * Weight log — CRUD for weight tracking.
+ *
+ * Two-tier storage:
+ * - localStorage (sync) — array of WeightLogEntry; source for reads
+ * - Supabase weight_log table (async) — write-through + hydrate on login
  */
 
 export interface WeightLogEntry {
@@ -50,14 +54,17 @@ export function addWeight(
   const filtered = all.filter((e) => e.date !== entry.date);
   filtered.push(entry);
   saveAll(filtered);
+  void syncWeightToSupabase("upsert", entry);
   return entry;
 }
 
 export function deleteWeight(id: string): boolean {
   const all = loadAll();
+  const removed = all.find((e) => e.id === id);
   const next = all.filter((e) => e.id !== id);
   if (next.length === all.length) return false;
   saveAll(next);
+  if (removed) void syncWeightToSupabase("delete", removed);
   return true;
 }
 
@@ -112,4 +119,93 @@ export function getWeightTrend(days = 7): WeightTrend | null {
 export function clearAllWeight(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(KEY);
+}
+
+// ============ Supabase sync ============
+
+async function syncWeightToSupabase(
+  op: "upsert" | "delete",
+  entry: WeightLogEntry,
+): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    if (op === "delete") {
+      const { error } = await supabase
+        .from("weight_log")
+        .delete()
+        .eq("id", entry.id)
+        .eq("user_id", user.id);
+      if (error)
+        console.warn("[weight_log] delete sync failed:", error.message);
+      return;
+    }
+
+    const row = {
+      id: entry.id,
+      user_id: user.id,
+      date: entry.date,
+      weight_kg: entry.weight_kg,
+      notes: entry.notes ?? null,
+      created_at: entry.created_at,
+    };
+    const { error } = await supabase.from("weight_log").upsert(row, {
+      onConflict: "user_id,date",
+    });
+    if (error) console.warn("[weight_log] upsert sync failed:", error.message);
+  } catch (e) {
+    console.warn("[weight_log] sync threw:", e);
+  }
+}
+
+export async function hydrateWeightLogFromSupabase(): Promise<number> {
+  if (typeof window === "undefined") return 0;
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return 0;
+
+    const { data, error } = await supabase
+      .from("weight_log")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("date", { ascending: true });
+    if (error) {
+      console.warn("[weight_log] hydrate failed:", error.message);
+      return 0;
+    }
+    if (!data) return 0;
+
+    const entries: WeightLogEntry[] = data.map(
+      (r: {
+        id: string;
+        date: string;
+        weight_kg: number;
+        notes: string | null;
+        created_at: string;
+      }) => ({
+        id: r.id,
+        date: r.date,
+        weight_kg: r.weight_kg,
+        notes: r.notes ?? undefined,
+        created_at: r.created_at,
+      }),
+    );
+    saveAll(entries);
+    return entries.length;
+  } catch (e) {
+    console.warn("[weight_log] hydrate threw:", e);
+    return 0;
+  }
 }

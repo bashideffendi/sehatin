@@ -6,6 +6,7 @@ import { ProfileBlockingModal } from "@/components/profile-blocking-modal";
 import { loadProfile, type UserProfile } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
 import { migrateLocalStorageToSupabase } from "@/lib/supabase/migrate-from-localstorage";
+import { hydrateAllFromSupabase } from "@/lib/supabase/hydrate-from-supabase";
 
 const REQUIRED_FIELDS: (keyof UserProfile)[] = [
   "age",
@@ -47,8 +48,16 @@ export default function HomePage() {
       }
       setAuthed(isAuthed);
 
-      // If authed AND there's localStorage data, run one-time migration
+      // If authed: pull server-side data into localStorage, then attempt
+      // one-time migration (skipped automatically if Supabase already has
+      // data). This ordering means a fresh device gets server data first
+      // and won't clobber it with stale local data.
       if (isAuthed) {
+        try {
+          await hydrateAllFromSupabase();
+        } catch (e) {
+          console.warn("[home] hydrate failed (non-fatal)", e);
+        }
         try {
           await migrateLocalStorageToSupabase();
         } catch (e) {
@@ -56,7 +65,7 @@ export default function HomePage() {
         }
       }
 
-      // Load profile (still from localStorage for now — Phase 2 will switch to Supabase queries)
+      // Load profile from localStorage (now in sync with Supabase if authed)
       setProfile(loadProfile());
       setHydrated(true);
     })();

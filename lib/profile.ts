@@ -1,5 +1,9 @@
 /**
- * User profile storage helpers (localStorage MVP, no auth yet).
+ * User profile storage helpers.
+ *
+ * Two-tier storage:
+ * - localStorage (sync) — source of truth for component reads
+ * - Supabase (async, write-through + hydrate-on-login) — multi-device persistence
  *
  * Schema versioned via `v` field — bump kalau breaking change biar migrate.
  */
@@ -251,6 +255,9 @@ export function saveProfile(profile: Partial<UserProfile>): UserProfile {
     updated_at: new Date().toISOString(),
   };
   window.localStorage.setItem(PROFILE_KEY, JSON.stringify(merged));
+  // Fire-and-forget: write-through to Supabase. Errors logged, not thrown,
+  // because localStorage is the source of truth for sync component reads.
+  void syncProfileToSupabase(merged);
   return merged;
 }
 
@@ -264,4 +271,90 @@ export function isProfileComplete(p: UserProfile | null): boolean {
   return Boolean(
     p.sex && p.age && p.weight_kg && p.height_cm && p.activity && p.goal,
   );
+}
+
+// ============ Supabase sync ============
+
+/**
+ * Write the full profile to Supabase. Called as fire-and-forget from
+ * saveProfile() so component code stays sync.
+ */
+async function syncProfileToSupabase(profile: UserProfile): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    // Dynamic import keeps Supabase out of the SSR bundle for this module.
+    const { createClient } = await import("@/lib/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return; // Not signed in — localStorage only.
+
+    // Strip client-side `v` (Postgres doesn't have a `v` column).
+    const { v, ...fields } = profile;
+    void v;
+    const { error } = await supabase.from("profiles").upsert(
+      {
+        user_id: user.id,
+        ...fields,
+        completed_at: profile.completed_at ?? null,
+      },
+      { onConflict: "user_id" },
+    );
+    if (error) {
+      console.warn("[profile] Supabase sync failed:", error.message);
+    }
+  } catch (e) {
+    console.warn("[profile] Supabase sync threw:", e);
+  }
+}
+
+/**
+ * Fetch the user's profile from Supabase and write it to localStorage.
+ * Call after sign-in (or on page load when authed) to bring local cache in
+ * sync with the server-side source of truth.
+ *
+ * Returns the hydrated profile or null if Supabase has nothing (caller
+ * should then fall back to localStorage or trigger onboarding).
+ */
+export async function hydrateProfileFromSupabase(): Promise<UserProfile | null> {
+  if (typeof window === "undefined") return null;
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (error) {
+      console.warn("[profile] Supabase hydrate failed:", error.message);
+      return null;
+    }
+    if (!data) return null; // No row yet (new user)
+
+    // Strip Postgres-only columns; keep everything else.
+    const { user_id: _uid, created_at: _ca, ...rest } = data;
+    void _uid;
+    void _ca;
+
+    const profile: UserProfile = {
+      v: 2,
+      ...rest,
+    } as UserProfile;
+
+    // Write to localStorage so sync reads pick it up.
+    window.localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    return profile;
+  } catch (e) {
+    console.warn("[profile] Supabase hydrate threw:", e);
+    return null;
+  }
 }

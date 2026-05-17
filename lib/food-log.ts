@@ -1,8 +1,11 @@
 /**
  * Food log — client-side localStorage CRUD untuk daily food tracking.
  *
+ * Two-tier storage:
+ * - localStorage (sync) — array of FoodLogEntry; source for reads
+ * - Supabase food_log table (async) — write-through + hydrate on login
+ *
  * Storage key: sehatin:food_log:v1
- * Data: array of FoodLogEntry, queried/filtered in memory.
  */
 
 export type MealSlot = "sarapan" | "makan_siang" | "makan_malam" | "snack";
@@ -103,6 +106,7 @@ export function addEntry(
   const all = loadAll();
   all.push(entry);
   saveAll(all);
+  void syncEntryToSupabase("upsert", entry);
   return entry;
 }
 
@@ -111,6 +115,7 @@ export function deleteEntry(id: string): boolean {
   const next = all.filter((e) => e.id !== id);
   if (next.length === all.length) return false;
   saveAll(next);
+  void syncEntryToSupabase("delete", { id } as FoodLogEntry);
   return true;
 }
 
@@ -126,6 +131,7 @@ export function updateEntry(
   const updated: FoodLogEntry = { ...cur, ...patch, id: cur.id };
   all[idx] = updated;
   saveAll(all);
+  void syncEntryToSupabase("upsert", updated);
   return updated;
 }
 
@@ -219,4 +225,124 @@ export function exportAllAsJSON(): string {
     null,
     2,
   );
+}
+
+// ============ Supabase sync ============
+
+/**
+ * Write-through to Supabase. Called as fire-and-forget from addEntry,
+ * updateEntry, and deleteEntry. localStorage stays the sync source of truth.
+ */
+async function syncEntryToSupabase(
+  op: "upsert" | "delete",
+  entry: FoodLogEntry,
+): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    if (op === "delete") {
+      const { error } = await supabase
+        .from("food_log")
+        .delete()
+        .eq("id", entry.id)
+        .eq("user_id", user.id);
+      if (error) console.warn("[food_log] delete sync failed:", error.message);
+      return;
+    }
+
+    const row = {
+      id: entry.id,
+      user_id: user.id,
+      date: entry.date,
+      meal_slot: entry.meal_slot,
+      food_code: entry.food_code ?? null,
+      food_name: entry.food_name,
+      portion_g: entry.portion_g,
+      kcal: entry.kcal,
+      protein_g: entry.protein_g ?? null,
+      fat_g: entry.fat_g ?? null,
+      carb_g: entry.carb_g ?? null,
+      source: entry.source,
+      notes: entry.notes ?? null,
+      created_at: entry.created_at,
+    };
+    const { error } = await supabase.from("food_log").upsert(row, {
+      onConflict: "id",
+    });
+    if (error) console.warn("[food_log] upsert sync failed:", error.message);
+  } catch (e) {
+    console.warn("[food_log] sync threw:", e);
+  }
+}
+
+/**
+ * Fetch all food log entries for the current user from Supabase and write
+ * them to localStorage. Overwrites the local cache — call after sign-in.
+ */
+export async function hydrateFoodLogFromSupabase(): Promise<number> {
+  if (typeof window === "undefined") return 0;
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return 0;
+
+    const { data, error } = await supabase
+      .from("food_log")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("date", { ascending: true });
+    if (error) {
+      console.warn("[food_log] hydrate failed:", error.message);
+      return 0;
+    }
+    if (!data) return 0;
+
+    const entries: FoodLogEntry[] = data.map(
+      (r: {
+        id: string;
+        date: string;
+        meal_slot: MealSlot;
+        food_code: string | null;
+        food_name: string;
+        portion_g: number;
+        kcal: number;
+        protein_g: number | null;
+        fat_g: number | null;
+        carb_g: number | null;
+        source: FoodLogEntry["source"];
+        notes: string | null;
+        created_at: string;
+      }) => ({
+        id: r.id,
+        date: r.date,
+        meal_slot: r.meal_slot,
+        food_code: r.food_code ?? undefined,
+        food_name: r.food_name,
+        portion_g: r.portion_g,
+        kcal: r.kcal,
+        protein_g: r.protein_g ?? undefined,
+        fat_g: r.fat_g ?? undefined,
+        carb_g: r.carb_g ?? undefined,
+        source: r.source,
+        notes: r.notes ?? undefined,
+        created_at: r.created_at,
+      }),
+    );
+    saveAll(entries);
+    return entries.length;
+  } catch (e) {
+    console.warn("[food_log] hydrate threw:", e);
+    return 0;
+  }
 }

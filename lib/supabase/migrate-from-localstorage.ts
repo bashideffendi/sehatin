@@ -1,7 +1,11 @@
 /**
- * Migrate localStorage demo/legacy data → Supabase tables after user logs in.
+ * Migrate localStorage legacy data → Supabase tables after user logs in.
  *
- * Runs ONCE after first login (tracked via localStorage flag).
+ * Runs ONCE after first login (tracked via localStorage flag). Skips entirely
+ * if Supabase already has data for this user (prevents Device B from
+ * overwriting Device A's already-synced data when both devices have
+ * different localStorage caches).
+ *
  * Safely no-op if user has no localStorage data.
  */
 "use client";
@@ -20,7 +24,7 @@ export async function migrateLocalStorageToSupabase(): Promise<{
     return { migrated: false, tables: [] };
   }
 
-  // Already migrated? Skip.
+  // Already migrated on this device? Skip.
   if (window.localStorage.getItem(MIGRATED_FLAG) === "1") {
     return { migrated: false, tables: [] };
   }
@@ -35,6 +39,19 @@ export async function migrateLocalStorageToSupabase(): Promise<{
   } = await supabase.auth.getUser();
   if (!user) {
     return { migrated: false, tables: [], error: "No authenticated user" };
+  }
+
+  // If Supabase already has a profile row for this user, the data was
+  // either migrated from another device or set via onboarding while signed
+  // in. Skip migration so we don't clobber it with stale localStorage.
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (existingProfile) {
+    window.localStorage.setItem(MIGRATED_FLAG, "1");
+    return { migrated: false, tables: [], error: "Supabase already has data" };
   }
 
   const tables: string[] = [];
