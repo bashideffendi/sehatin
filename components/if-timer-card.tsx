@@ -178,33 +178,44 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
 
   const totalMin = state.mode === "fasting" ? state.protocolFastMin : state.protocolEatMin;
   const pct = Math.min(1, state.elapsedMin / totalMin);
-  const size = 110;
-  const stroke = 9;
+  const size = 144;
+  const stroke = 11;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference * (1 - pct);
   const gradId = "if-card-grad";
 
   return (
-    <div className="bg-surface rounded-[28px] border border-hairline shadow-[var(--shadow-paper-1)] p-5 sm:p-6 h-full relative overflow-hidden paper-grain">
-      {/* Sun-clay decorative tint */}
+    <div className="bg-surface rounded-[28px] border border-hairline shadow-[var(--shadow-paper-1)] p-6 sm:p-7 h-full relative overflow-hidden flex flex-col">
+      {/* Sun radial gradient — fills top-right + bleeds across upper-right quadrant */}
       <span
-        className="absolute -top-12 -right-12 w-44 h-44 rounded-full opacity-30 pointer-events-none"
+        className="absolute -top-24 -right-24 w-80 h-80 rounded-full pointer-events-none"
         style={{
           background:
-            "radial-gradient(circle, var(--color-sun) 0%, transparent 70%)",
+            "radial-gradient(circle, rgba(245,206,90,0.55) 0%, rgba(245,206,90,0.18) 45%, transparent 75%)",
         }}
       />
-      <div className="relative z-10 flex items-start justify-between mb-3">
-        <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+      {/* Clay accent bottom-left */}
+      <span
+        className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(217,124,79,0.16) 0%, transparent 70%)",
+        }}
+      />
+
+      {/* ===== Top row: kicker left + phase pill right ===== */}
+      <div className="relative z-10 flex items-start justify-between mb-4">
+        <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
           IF Timer · 16:8
         </div>
-        <Pill tone={state.phase.tone} size="sm">
+        <Pill tone={state.phase.tone} size="md">
           {state.phase.label}
         </Pill>
       </div>
 
-      <div className="relative z-10 flex items-center gap-4">
+      {/* ===== Main row: donut LEFT + body RIGHT, vertically centered to fill ===== */}
+      <div className="relative z-10 flex items-center gap-5 flex-1">
         {/* Donut */}
         <div
           className="relative flex-shrink-0"
@@ -240,10 +251,11 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}
+              style={{ transition: "stroke-dashoffset 400ms ease" }}
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-clay">
+            <div className="text-[9.5px] font-bold uppercase tracking-[0.15em] text-clay">
               {state.mode === "fasting"
                 ? "Fasting"
                 : state.mode === "eating"
@@ -251,15 +263,15 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
                   : "Idle"}
             </div>
             <div
-              className="tabular mt-0.5 leading-none"
+              className="tabular mt-1 leading-none"
               style={{
                 fontFamily: "var(--font-serif)",
-                fontSize: 24,
+                fontSize: 36,
               }}
             >
               {fmtHHMM(state.elapsedMin)}
             </div>
-            <div className="text-[8.5px] text-muted mt-0.5">
+            <div className="text-[10px] text-muted mt-1 tabular">
               {state.mode === "fasting"
                 ? `dari 16:00`
                 : state.mode === "eating"
@@ -269,16 +281,17 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
           </div>
         </div>
 
-        {/* Right side: copy + button */}
-        <div className="flex-1 min-w-0">
-          <p className="text-[12px] text-muted leading-relaxed">
+        {/* Right side: copy stacked top, button stacked bottom */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center gap-3 h-full py-1">
+          <p className="text-[13px] text-muted leading-relaxed">
             {state.mode === "fasting" && state.lastMealHHMM ? (
               <>
                 Terakhir makan jam{" "}
                 <span className="font-bold text-ink tabular">
                   {state.lastMealHHMM}
                 </span>
-                .{" "}
+                .
+                <br />
                 {state.nextEatingOpenHHMM ? (
                   <>
                     Buka next window{" "}
@@ -292,7 +305,8 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
                 )}
                 {ramadanActive ? (
                   <>
-                    {" "}Mode Ramadan otomatis aktif{" "}
+                    <br />
+                    Mode Ramadan otomatis aktif{" "}
                     <span className="font-semibold text-clay">15 Mar.</span>
                   </>
                 ) : null}
@@ -303,9 +317,10 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
                 <span className="font-bold text-ink tabular">
                   {state.eatingCloseHHMM ?? "—"}
                 </span>
-                .{" "}
+                .
                 {state.lastMealHHMM && (
                   <>
+                    <br />
                     Terakhir makan{" "}
                     <span className="font-semibold text-clay tabular">
                       {state.lastMealHHMM}
@@ -318,12 +333,14 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
               <>Catat meal pertama buat mulai tracking.</>
             )}
           </p>
-          <Link
-            href="/tools/if"
-            className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface border border-hairline-2 hover:border-forest hover:bg-forest-50 text-[11.5px] font-semibold transition-colors"
-          >
-            Adjust window
-          </Link>
+          <div>
+            <Link
+              href="/tools/if"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface border border-hairline-2 hover:border-forest hover:bg-forest-50 text-[12px] font-semibold transition-colors shadow-[var(--shadow-paper-1)]"
+            >
+              Adjust window
+            </Link>
+          </div>
         </div>
       </div>
     </div>
