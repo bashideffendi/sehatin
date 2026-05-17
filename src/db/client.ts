@@ -109,14 +109,19 @@ export async function resolveDbPath(): Promise<string> {
     /* ignore */
   }
 
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_BASE_URL ||
-      "https://sehatin-tan.vercel.app";
-  const res = await fetch(`${baseUrl}/sehatin.db`);
+  // Prefer the production alias (always public) over VERCEL_URL (deployment-
+  // specific, often gated by Vercel Deployment Protection → returns 401).
+  const baseUrl =
+    process.env.SEHATIN_DB_BASE_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.NEXT_PUBLIC_BASE_URL ||
+        "https://sehatin-tan.vercel.app");
+  const dbUrl = `${baseUrl}/sehatin.db`;
+  const res = await fetch(dbUrl, { cache: "no-store" });
   if (!res.ok) {
     throw new Error(
-      `Failed to fetch SQLite DB from ${baseUrl}/sehatin.db — HTTP ${res.status}`,
+      `Failed to fetch SQLite DB from ${dbUrl} — HTTP ${res.status}. Production URL must be publicly accessible (check Vercel Deployment Protection).`,
     );
   }
   const buf = Buffer.from(await res.arrayBuffer());
