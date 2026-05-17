@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   Salad,
@@ -10,9 +10,11 @@ import {
   Wrench,
   User,
   Plus,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
+import { signOut } from "@/lib/auth-actions";
 
 interface NavItem {
   href: string;
@@ -49,6 +51,18 @@ function isActive(pathname: string, href: string) {
 
 export function DesktopSidebar({ user, className }: DesktopSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [signingOut, setSigningOut] = React.useState(false);
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    await signOut();
+    // Hard navigate so the page tree fully re-evaluates auth state.
+    router.push("/");
+    router.refresh();
+  };
+
   return (
     <aside
       className={cn(
@@ -92,7 +106,7 @@ export function DesktopSidebar({ user, className }: DesktopSidebarProps) {
       {user ? (
         <div className="m-3 p-3 rounded-[14px] bg-paper-deep border border-hairline">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-forest text-paper inline-flex items-center justify-center font-bold text-sm">
+            <div className="w-8 h-8 rounded-full bg-forest text-paper inline-flex items-center justify-center font-bold text-sm flex-shrink-0">
               {(user.name ?? "U").slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -103,6 +117,20 @@ export function DesktopSidebar({ user, className }: DesktopSidebarProps) {
                 {user.plan ?? "Free"}
               </div>
             </div>
+            <button
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className={cn(
+                "flex-shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-lg transition-colors",
+                signingOut
+                  ? "text-muted/40 cursor-not-allowed"
+                  : "text-muted hover:text-clay hover:bg-surface-2",
+              )}
+              title="Logout"
+              aria-label="Logout"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       ) : (

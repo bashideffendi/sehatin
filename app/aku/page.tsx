@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   User,
   Utensils,
@@ -15,6 +16,7 @@ import {
   PartyPopper,
   Briefcase,
   Cookie,
+  LogOut,
 } from "lucide-react";
 import {
   loadProfile,
@@ -23,6 +25,7 @@ import {
   type ModeKhusus,
 } from "@/lib/profile";
 import { Card, Kicker, Pill, Btn } from "@/components/ui";
+import { signOut } from "@/lib/auth-actions";
 
 // ============ Display helpers ============
 
@@ -484,7 +487,49 @@ export default function AkuPage() {
           <DataRow label="Versi" value="v0.8.2 · 2026" inline last />
         </div>
       </Card>
+
+      {/* ============ Akun card (sign out) ============ */}
+      <SignOutCard />
     </div>
+  );
+}
+
+function SignOutCard() {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    await signOut();
+    router.push("/");
+    router.refresh();
+  };
+
+  return (
+    <Card surface="surface-2" radius="lg" shadow="none" className="p-5 sm:p-6 border-hairline">
+      <Kicker className="mb-4">Akun</Kicker>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-[13px] font-semibold">Logout</div>
+          <div className="text-[10.5px] text-muted mt-0.5">
+            Keluar dari device ini. Data tetap aman di server.
+          </div>
+        </div>
+        <button
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className={
+            signingOut
+              ? "inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] font-semibold bg-surface-2 text-muted cursor-not-allowed"
+              : "inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] font-semibold bg-clay text-paper hover:-translate-y-0.5 transition-transform"
+          }
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          {signingOut ? "Keluar..." : "Logout"}
+        </button>
+      </div>
+    </Card>
   );
 }
 

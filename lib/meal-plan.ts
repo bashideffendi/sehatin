@@ -48,6 +48,7 @@ export function saveMealPlan(
   if (typeof window !== "undefined") {
     window.localStorage.setItem(KEY, JSON.stringify(stored));
   }
+  void syncMealPlanToSupabase(stored, "upsert");
   return stored;
 }
 
@@ -55,6 +56,7 @@ export function saveMealPlan(
 export function updateMealPlan(stored: StoredMealPlan): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(stored));
+  void syncMealPlanToSupabase(stored, "upsert");
 }
 
 export function getActiveMealPlan(): StoredMealPlan | null {
@@ -71,6 +73,109 @@ export function getActiveMealPlan(): StoredMealPlan | null {
 export function clearMealPlan(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(KEY);
+}
+
+// ============ Supabase sync ============
+
+async function syncMealPlanToSupabase(
+  stored: StoredMealPlan,
+  op: "upsert" | "delete",
+): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    if (op === "delete") {
+      const { error } = await supabase
+        .from("meal_plans")
+        .delete()
+        .eq("id", stored.id)
+        .eq("user_id", user.id);
+      if (error) console.warn("[meal_plan] delete sync failed:", error.message);
+      return;
+    }
+
+    // Mark all of the user's other plans inactive (only one active at a time).
+    await supabase
+      .from("meal_plans")
+      .update({ is_active: false })
+      .eq("user_id", user.id)
+      .neq("id", stored.id);
+
+    const { error } = await supabase.from("meal_plans").upsert(
+      {
+        id: stored.id,
+        user_id: user.id,
+        start_date: stored.start_date,
+        days: stored.days,
+        diet_method: stored.diet_method ?? null,
+        budget_idr_per_day: stored.budget_idr_per_day ?? null,
+        context_notes: stored.context_notes ?? null,
+        targets: stored.targets,
+        plan: stored.plan,
+        generated_at: stored.generated_at,
+        is_active: true,
+      },
+      { onConflict: "id" },
+    );
+    if (error) console.warn("[meal_plan] upsert sync failed:", error.message);
+  } catch (e) {
+    console.warn("[meal_plan] sync threw:", e);
+  }
+}
+
+/**
+ * Fetch the user's most recent active meal plan from Supabase and write it
+ * to localStorage. Call after sign-in to bring the local cache in sync.
+ */
+export async function hydrateMealPlanFromSupabase(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data, error } = await supabase
+      .from("meal_plans")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .order("generated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.warn("[meal_plan] hydrate failed:", error.message);
+      return false;
+    }
+    if (!data) return false;
+
+    const stored: StoredMealPlan = {
+      id: data.id,
+      generated_at: data.generated_at,
+      start_date: data.start_date,
+      days: data.days,
+      diet_method: data.diet_method ?? undefined,
+      budget_idr_per_day: data.budget_idr_per_day ?? undefined,
+      context_notes: data.context_notes ?? undefined,
+      targets: data.targets as NutritionTargets,
+      plan: data.plan as MealPlan,
+    };
+    window.localStorage.setItem(KEY, JSON.stringify(stored));
+    return true;
+  } catch (e) {
+    console.warn("[meal_plan] hydrate threw:", e);
+    return false;
+  }
 }
 
 /** Resolve plan-day for a given ISO date. Returns null if outside plan range. */

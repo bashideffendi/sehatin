@@ -57,6 +57,7 @@ export function saveWorkoutPlan(
   if (typeof window !== "undefined") {
     window.localStorage.setItem(KEY, JSON.stringify(stored));
   }
+  void syncWorkoutPlanToSupabase(stored);
   return stored;
 }
 
@@ -74,6 +75,101 @@ export function getActiveWorkoutPlan(): StoredWorkoutPlan | null {
 export function clearWorkoutPlan(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(KEY);
+}
+
+// ============ Supabase sync ============
+
+async function syncWorkoutPlanToSupabase(
+  stored: StoredWorkoutPlan,
+): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Deactivate other plans (one active at a time)
+    await supabase
+      .from("workout_plans")
+      .update({ is_active: false })
+      .eq("user_id", user.id)
+      .neq("id", stored.id);
+
+    const { error } = await supabase.from("workout_plans").upsert(
+      {
+        id: stored.id,
+        user_id: user.id,
+        start_date: stored.start_date,
+        level: stored.level,
+        goal: stored.goal,
+        split: stored.split,
+        days_per_week: stored.days_per_week,
+        session_minutes: stored.session_minutes,
+        weeks: stored.weeks,
+        context_notes: stored.context_notes ?? null,
+        injuries_or_limitations: stored.injuries_or_limitations ?? null,
+        program: stored.program,
+        generated_at: stored.generated_at,
+        is_active: true,
+      },
+      { onConflict: "id" },
+    );
+    if (error)
+      console.warn("[workout_plan] upsert sync failed:", error.message);
+  } catch (e) {
+    console.warn("[workout_plan] sync threw:", e);
+  }
+}
+
+export async function hydrateWorkoutPlanFromSupabase(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data, error } = await supabase
+      .from("workout_plans")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .order("generated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.warn("[workout_plan] hydrate failed:", error.message);
+      return false;
+    }
+    if (!data) return false;
+
+    const stored: StoredWorkoutPlan = {
+      id: data.id,
+      generated_at: data.generated_at,
+      start_date: data.start_date,
+      level: data.level as Level,
+      goal: data.goal as TrainingGoal,
+      split: data.split as SplitType,
+      days_per_week: data.days_per_week,
+      session_minutes: data.session_minutes,
+      weeks: data.weeks,
+      context_notes: data.context_notes ?? undefined,
+      injuries_or_limitations: data.injuries_or_limitations ?? undefined,
+      program: data.program as WorkoutProgram,
+    };
+    window.localStorage.setItem(KEY, JSON.stringify(stored));
+    return true;
+  } catch (e) {
+    console.warn("[workout_plan] hydrate threw:", e);
+    return false;
+  }
 }
 
 /**

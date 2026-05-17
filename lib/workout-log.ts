@@ -96,14 +96,17 @@ export function upsertSession(
   }
   next.push(entry);
   saveAll(next);
+  void syncWorkoutLogToSupabase("upsert", entry);
   return entry;
 }
 
 export function deleteSession(id: string): boolean {
   const all = loadAll();
+  const removed = all.find((s) => s.id === id);
   const next = all.filter((s) => s.id !== id);
   if (next.length === all.length) return false;
   saveAll(next);
+  if (removed) void syncWorkoutLogToSupabase("delete", removed);
   return true;
 }
 
@@ -157,4 +160,112 @@ export function countSessionsForPlan(planId: string): number {
 export function clearAllSessions(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(KEY);
+}
+
+// ============ Supabase sync ============
+
+async function syncWorkoutLogToSupabase(
+  op: "upsert" | "delete",
+  entry: WorkoutSessionLog,
+): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    if (op === "delete") {
+      const { error } = await supabase
+        .from("workout_logs")
+        .delete()
+        .eq("id", entry.id)
+        .eq("user_id", user.id);
+      if (error)
+        console.warn("[workout_log] delete sync failed:", error.message);
+      return;
+    }
+
+    const row = {
+      id: entry.id,
+      user_id: user.id,
+      date: entry.date,
+      plan_id: entry.plan_id ?? null,
+      week_idx: entry.week_idx ?? null,
+      session_idx: entry.session_idx ?? null,
+      day_label: entry.day_label ?? null,
+      focus: entry.focus ?? null,
+      exercises: entry.exercises,
+      duration_min: entry.duration_min ?? null,
+      notes: entry.notes ?? null,
+      created_at: entry.created_at,
+    };
+    const { error } = await supabase.from("workout_logs").upsert(row, {
+      onConflict: "id",
+    });
+    if (error)
+      console.warn("[workout_log] upsert sync failed:", error.message);
+  } catch (e) {
+    console.warn("[workout_log] sync threw:", e);
+  }
+}
+
+export async function hydrateWorkoutLogFromSupabase(): Promise<number> {
+  if (typeof window === "undefined") return 0;
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient() as any;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return 0;
+
+    const { data, error } = await supabase
+      .from("workout_logs")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("date", { ascending: true });
+    if (error) {
+      console.warn("[workout_log] hydrate failed:", error.message);
+      return 0;
+    }
+    if (!data) return 0;
+
+    const sessions: WorkoutSessionLog[] = data.map(
+      (r: {
+        id: string;
+        date: string;
+        plan_id: string | null;
+        week_idx: number | null;
+        session_idx: number | null;
+        day_label: string | null;
+        focus: string | null;
+        exercises: ExerciseLog[];
+        duration_min: number | null;
+        notes: string | null;
+        created_at: string;
+      }) => ({
+        id: r.id,
+        date: r.date,
+        plan_id: r.plan_id ?? undefined,
+        week_idx: r.week_idx ?? undefined,
+        session_idx: r.session_idx ?? undefined,
+        day_label: r.day_label ?? undefined,
+        focus: r.focus ?? undefined,
+        exercises: r.exercises,
+        duration_min: r.duration_min ?? undefined,
+        notes: r.notes ?? undefined,
+        created_at: r.created_at,
+      }),
+    );
+    saveAll(sessions);
+    return sessions.length;
+  } catch (e) {
+    console.warn("[workout_log] hydrate threw:", e);
+    return 0;
+  }
 }
