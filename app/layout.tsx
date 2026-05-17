@@ -44,10 +44,14 @@ export default function RootLayout({
           crossOrigin=""
         />
       </head>
-      <body className="min-h-screen flex flex-col antialiased">
-        <Nav />
-        <main className="flex-1">{children}</main>
-        <Footer />
+      <body className="min-h-screen antialiased bg-paper text-ink">
+        <div className="md:flex md:items-stretch md:min-h-screen">
+          <Nav />
+          <div className="flex-1 min-w-0 flex flex-col">
+            <main className="flex-1 pb-24 md:pb-0">{children}</main>
+            <Footer />
+          </div>
+        </div>
       </body>
     </html>
   );

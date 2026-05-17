@@ -3,15 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Flame,
-  Sparkles,
-  Dumbbell,
-  Scale,
-  Camera,
   Plus,
-  ChevronRight,
-  ClipboardList,
-  Salad,
-  Target,
+  Camera,
+  Search,
+  Scan,
+  Scale,
+  RefreshCw,
+  Dumbbell,
 } from "lucide-react";
 import { loadProfile, type UserProfile } from "@/lib/profile";
 import { calculateTargets } from "@/src/nutrition/tdee";
@@ -30,8 +28,6 @@ import {
   getActiveWorkoutPlan,
   findNextUnloggedSession,
   SPLIT_LABEL,
-  TRAINING_GOAL_LABEL,
-  focusStyle,
   type StoredWorkoutPlan,
 } from "@/lib/workout";
 import { countSessionsForPlan } from "@/lib/workout-log";
@@ -40,9 +36,8 @@ import {
   type WeightLogEntry,
 } from "@/lib/weight-log";
 import { getWeekInsights, getStreak } from "@/lib/insights";
-import { WeeklyChart } from "@/components/weekly-chart";
-import { WeightChart } from "@/components/weight-chart";
-import { cn, fmtNum } from "@/lib/utils";
+import { Pill, Btn, Card, Kicker, Donut, BarChart, Sparkline } from "@/components/ui";
+import { fmtKcal, rupiah } from "@/lib/format";
 
 function timeOfDayGreeting(): string {
   const h = new Date().getHours();
@@ -50,6 +45,20 @@ function timeOfDayGreeting(): string {
   if (h < 15) return "Selamat siang";
   if (h < 18) return "Selamat sore";
   return "Selamat malam";
+}
+
+function formatDateID(date: Date): string {
+  return date
+    .toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    })
+    .toUpperCase();
+}
+
+function dayLabel3(weekday: number): string {
+  return ["MIN", "SEN", "SEL", "RAB", "KAM", "JUM", "SAB"][weekday] ?? "";
 }
 
 interface Props {
@@ -64,17 +73,13 @@ export function Dashboard({ profile }: Props) {
     null,
   );
   const [weightHistory, setWeightHistory] = useState<WeightLogEntry[]>([]);
-  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     setSummary(getDailySummary(today));
     setActivePlan(getActiveMealPlan());
     setActiveWorkout(getActiveWorkoutPlan());
     setWeightHistory(getWeightHistory());
-  }, [today, tick]);
-
-  // touch tick so React tracks deps when log changes externally
-  void tick;
+  }, [today]);
 
   const targets = useMemo(() => {
     if (
@@ -84,9 +89,8 @@ export function Dashboard({ profile }: Props) {
       !profile.height_cm ||
       !profile.activity ||
       !profile.goal
-    ) {
+    )
       return null;
-    }
     try {
       return calculateTargets({
         age: profile.age,
@@ -108,7 +112,7 @@ export function Dashboard({ profile }: Props) {
 
   const nextSession = useMemo(
     () => (activeWorkout ? findNextUnloggedSession(activeWorkout) : null),
-    [activeWorkout, tick],
+    [activeWorkout],
   );
 
   const workoutProgress = useMemo(() => {
@@ -117,10 +121,8 @@ export function Dashboard({ profile }: Props) {
       (s, w) => s + w.sessions.length,
       0,
     );
-    const done = countSessionsForPlan(activeWorkout.id);
-    void tick;
-    return { done, total };
-  }, [activeWorkout, tick]);
+    return { done: countSessionsForPlan(activeWorkout.id), total };
+  }, [activeWorkout]);
 
   const weekInsights = useMemo(() => {
     if (!summary) return null;
@@ -134,397 +136,512 @@ export function Dashboard({ profile }: Props) {
 
   if (!summary) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-8 text-text-muted">
-        Loading...
-      </div>
+      <div className="max-w-5xl mx-auto px-4 py-8 text-muted">Loading...</div>
     );
   }
 
   const kcalTarget = targets?.target_kcal ?? null;
-  const pct = kcalTarget
-    ? Math.min(120, (summary.total_kcal / kcalTarget) * 100)
-    : null;
-  const remaining = kcalTarget
-    ? Math.max(0, kcalTarget - summary.total_kcal)
-    : null;
+  const kcalToday = summary.total_kcal;
+  const remaining = kcalTarget ? Math.max(0, kcalTarget - kcalToday) : null;
+  const todayDate = new Date();
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 pb-16">
-      {/* Greeting */}
-      <div className="mb-6 flex items-baseline justify-between flex-wrap gap-2">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+      {/* ============ Header ============ */}
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            {timeOfDayGreeting()} 👋
-          </h1>
-          <p className="mt-0.5 text-sm text-text-muted">
-            {new Date().toLocaleDateString("id-ID", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-            })}
-          </p>
-        </div>
-        {streak > 0 && (
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-50 dark:bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-500/30">
-            <Flame className="w-4 h-4" fill="currentColor" />
-            <span className="font-bold tabular-nums">{streak}</span>
-            <span className="text-xs font-semibold">
-              hari{streak > 1 ? " berturut" : ""}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Today kcal hero */}
-      <div className="mb-4 p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-600/20">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 text-brand-100 text-sm font-medium">
-              <Flame className="w-4 h-4" />
-              Kalori hari ini
-            </div>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-4xl sm:text-5xl font-bold tabular-nums">
-                {fmtNum(summary.total_kcal)}
-              </span>
-              {kcalTarget && (
-                <span className="text-brand-100 text-sm">
-                  / {fmtNum(kcalTarget)} kcal
-                </span>
-              )}
-            </div>
-            {kcalTarget && remaining !== null && (
-              <div className="mt-1 text-xs text-brand-100">
-                {pct! >= 110
-                  ? `Lewat target ${(pct! - 100).toFixed(0)}%`
-                  : `Sisa ${fmtNum(remaining)} kcal`}
-              </div>
-            )}
-          </div>
-          <Link
-            href="/log"
-            className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur text-white text-sm font-semibold transition-colors"
-          >
-            Lihat
-            <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-        {kcalTarget && pct !== null && (
-          <div className="mt-3 h-2 bg-white/20 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-white rounded-full transition-all duration-300"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-        )}
-        <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
-          <div className="text-center">
-            <div className="text-brand-100">Protein</div>
-            <div className="font-bold tabular-nums text-base mt-0.5">
-              {summary.total_protein_g}
-              <span className="text-xs font-normal opacity-80 ml-0.5">g</span>
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-brand-100">Lemak</div>
-            <div className="font-bold tabular-nums text-base mt-0.5">
-              {summary.total_fat_g}
-              <span className="text-xs font-normal opacity-80 ml-0.5">g</span>
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-brand-100">Karbo</div>
-            <div className="font-bold tabular-nums text-base mt-0.5">
-              {summary.total_carb_g}
-              <span className="text-xs font-normal opacity-80 ml-0.5">g</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Plan + Workout (2-col on desktop) */}
-      <div className="grid sm:grid-cols-2 gap-3 mb-4">
-        {/* Meal plan card */}
-        {planDay ? (
-          <Link
-            href="/plan"
-            className="group p-4 rounded-2xl bg-surface border border-border hover:border-brand-300 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-9 h-9 rounded-xl bg-brand-50 dark:bg-brand-500/15 text-brand-600 flex items-center justify-center">
-                <Salad className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-bold uppercase tracking-wide text-brand-600">
-                  Plan makan hari ini
-                </div>
-                <div className="text-xs text-text-muted tabular-nums">
-                  {planDay.meals.length} meal · {fmtNum(planDay.total_kcal)}{" "}
-                  kcal
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-brand-600 transition-colors" />
-            </div>
-            <ul className="space-y-0.5 text-xs">
-              {planDay.meals.slice(0, 4).map((m, i) => (
-                <li
-                  key={i}
-                  className="flex items-baseline justify-between gap-2"
-                >
-                  <span className="capitalize text-fg/80 truncate">
-                    {m.slot}
-                  </span>
-                  <span className="text-text-muted tabular-nums flex-shrink-0">
-                    {fmtNum(m.total_kcal)} kcal
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Link>
-        ) : (
-          <Link
-            href="/plan"
-            className="group p-4 rounded-2xl border-2 border-dashed border-border hover:border-brand-300 transition-all"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-9 h-9 rounded-xl bg-brand-50/50 dark:bg-brand-500/10 text-brand-600 flex items-center justify-center">
-                <Salad className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold">Meal plan</div>
-                <div className="text-xs text-text-muted">
-                  Belum ada plan aktif
-                </div>
-              </div>
-            </div>
-            <div className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 group-hover:text-brand-700">
-              <Sparkles className="w-3 h-3" /> Generate plan AI
-              <ChevronRight className="w-3 h-3" />
-            </div>
-          </Link>
-        )}
-
-        {/* Workout card */}
-        {activeWorkout && workoutProgress ? (
-          <Link
-            href="/workout"
-            className="group p-4 rounded-2xl bg-surface border border-border hover:border-brand-300 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-9 h-9 rounded-xl bg-brand-50 dark:bg-brand-500/15 text-brand-600 flex items-center justify-center">
-                <Dumbbell className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-bold uppercase tracking-wide text-brand-600">
-                  Program latihan
-                </div>
-                <div className="text-xs text-text-muted truncate">
-                  {SPLIT_LABEL[activeWorkout.split] ?? activeWorkout.split} ·{" "}
-                  {TRAINING_GOAL_LABEL[activeWorkout.goal] ?? activeWorkout.goal}
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-brand-600 transition-colors" />
-            </div>
-            {nextSession ? (
-              <div className="mt-2 p-2.5 rounded-lg bg-surface-muted">
-                <div className="text-[10px] font-bold uppercase tracking-wide text-text-muted">
-                  Sesi berikutnya
-                </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-base">
-                    {focusStyle(nextSession.session.focus).emoji}
-                  </span>
-                  <span className="font-semibold text-sm truncate">
-                    {nextSession.session.day_label}
-                  </span>
-                </div>
-                <div className="mt-0.5 text-[11px] text-text-muted tabular-nums">
-                  Minggu {nextSession.weekIdx + 1} ·{" "}
-                  {nextSession.session.duration_estimate_min} mnt
-                </div>
-              </div>
-            ) : (
-              <div className="mt-2 text-xs text-brand-600 font-semibold">
-                🎉 Semua sesi udah dijalanin!
-              </div>
-            )}
-            <div className="mt-2 text-[10px] text-text-muted tabular-nums">
-              Progress: {workoutProgress.done}/{workoutProgress.total} sesi
-            </div>
-          </Link>
-        ) : (
-          <Link
-            href="/workout"
-            className="group p-4 rounded-2xl border-2 border-dashed border-border hover:border-brand-300 transition-all"
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-9 h-9 rounded-xl bg-brand-50/50 dark:bg-brand-500/10 text-brand-600 flex items-center justify-center">
-                <Dumbbell className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold">Workout</div>
-                <div className="text-xs text-text-muted">
-                  Belum ada program
-                </div>
-              </div>
-            </div>
-            <div className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 group-hover:text-brand-700">
-              <Sparkles className="w-3 h-3" /> Generate program AI
-              <ChevronRight className="w-3 h-3" />
-            </div>
-          </Link>
-        )}
-      </div>
-
-      {/* Weekly chart */}
-      {weekInsights &&
-        (weekInsights.total_entries > 0 || streak > 0) && (
-          <div className="mb-4 p-4 sm:p-5 rounded-2xl bg-surface border border-border">
-            <div className="flex items-start justify-between mb-3 gap-4">
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
-                  7 hari terakhir
-                </div>
-                <div className="mt-0.5 text-xl font-bold tabular-nums">
-                  {fmtNum(weekInsights.avg_kcal)}{" "}
-                  <span className="text-xs font-normal text-text-muted">
-                    kcal/hari avg
-                  </span>
-                </div>
-              </div>
-              {kcalTarget && weekInsights.total_entries > 0 && (
-                <div className="flex items-center gap-2 text-xs">
-                  <Stat label="Hit" value={weekInsights.on_target_count} tone="brand" />
-                  <Stat label="Under" value={weekInsights.under_target_count} tone="amber" />
-                  <Stat label="Over" value={weekInsights.over_target_count} tone="rose" />
-                </div>
-              )}
-            </div>
-            <WeeklyChart
-              days={weekInsights.days}
-              targetKcal={kcalTarget ?? undefined}
-            />
-            <div className="mt-3 text-right">
-              <Link
-                href="/log"
-                className="text-xs font-semibold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1"
-              >
-                Buka catatan lengkap
-                <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
-          </div>
-        )}
-
-      {/* Weight chart */}
-      <WeightChart
-        history={weightHistory}
-        targetWeight={profile.target_weight_kg}
-        goodDirection={
-          profile.goal === "fat_loss" ||
-          profile.goal === "fat_loss_aggressive"
-            ? "down_is_good"
-            : profile.goal === "muscle_gain" ||
-                profile.goal === "slow_gain"
-              ? "up_is_good"
-              : "neutral"
-        }
-      />
-
-      {/* Quick actions */}
-      <div className="mb-4 p-4 rounded-2xl bg-surface border border-border">
-        <div className="text-[10px] font-bold uppercase tracking-wide text-text-muted mb-2">
-          Cepat
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <QuickAction
-            href="/log"
-            icon={<Camera className="w-4 h-4" />}
-            label="Foto makanan"
-            tone="sky"
-          />
-          <QuickAction
-            href="/log"
-            icon={<Plus className="w-4 h-4" />}
-            label="Cari makanan"
-            tone="brand"
-          />
-          <QuickAction
-            href="/log"
-            icon={<Scale className="w-4 h-4" />}
-            label="Catat berat"
-            tone="sky"
-          />
-          <QuickAction
-            href="/workout"
-            icon={<Dumbbell className="w-4 h-4" />}
-            label="Log workout"
-            tone="brand"
-          />
-        </div>
-      </div>
-
-      {/* Targets summary footer */}
-      {targets && (
-        <div className="p-4 rounded-2xl bg-surface-muted/50 border border-border/60">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-text-muted">
-              <Target className="w-3 h-3" /> Target harian kamu
-            </div>
-            <Link
-              href="/settings"
-              className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 inline-flex items-center gap-0.5"
+          <Kicker>{formatDateID(todayDate)}</Kicker>
+          <h1 className="mt-2 text-3xl sm:text-[44px] font-extrabold tracking-tight leading-tight">
+            {timeOfDayGreeting()},{" "}
+            <span
+              className="font-normal italic text-forest"
+              style={{ fontFamily: "var(--font-serif)" }}
             >
-              <ClipboardList className="w-3 h-3" /> Edit profil
-            </Link>
-          </div>
-          <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs tabular-nums">
-            <div>
-              <div className="text-text-muted">Kcal</div>
-              <div className="font-bold">{fmtNum(targets.target_kcal)}</div>
-            </div>
-            <div>
-              <div className="text-text-muted">Protein</div>
-              <div className="font-bold">{targets.protein_g}g</div>
-            </div>
-            <div>
-              <div className="text-text-muted">Lemak</div>
-              <div className="font-bold">{targets.fat_g}g</div>
-            </div>
-            <div>
-              <div className="text-text-muted">Karbo</div>
-              <div className="font-bold">{targets.carb_g}g</div>
-            </div>
-          </div>
+              {profile.name ?? "kamu"}
+            </span>
+            .
+          </h1>
+          {remaining !== null && (
+            <p className="mt-1 text-[13.5px] text-muted">
+              Sisa{" "}
+              <span className="tabular font-semibold text-ink">
+                {fmtKcal(remaining)}
+              </span>{" "}
+              kcal · cukup buat 2-3 meal lagi
+            </p>
+          )}
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          {streak > 0 && (
+            <Pill tone="clay" size="md" icon={<Flame className="w-3 h-3" />}>
+              <span className="tabular">{streak}</span> hari streak
+            </Pill>
+          )}
+          <Btn
+            variant="primary"
+            size="sm"
+            icon={<Plus />}
+          >
+            <Link href="/log" className="contents">
+              Catat makan
+            </Link>
+          </Btn>
+        </div>
+      </div>
+
+      {/* ============ Hero row: Kalori + IF Timer ============ */}
+      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr] mb-4">
+        {/* Kalori donut card — forest */}
+        <Card surface="forest" radius="xl" shadow="paper-2" className="overflow-hidden p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+            <Donut
+              value={kcalToday}
+              target={kcalTarget ?? 2000}
+              size={180}
+              stroke={16}
+              color="var(--color-paper)"
+              track="rgba(255,255,255,0.15)"
+            >
+              <div className="text-[9px] font-bold uppercase tracking-wider text-paper/70">
+                Kalori
+              </div>
+              <div
+                className="tabular mt-1 text-paper"
+                style={{ fontFamily: "var(--font-serif)", fontSize: 40, lineHeight: 1 }}
+              >
+                {fmtKcal(kcalToday)}
+              </div>
+              {kcalTarget && (
+                <div className="text-[10.5px] text-paper/75 mt-1 tabular">
+                  / {fmtKcal(kcalTarget)} kcal
+                </div>
+              )}
+            </Donut>
+            <div className="flex-1 w-full">
+              <MacroBar
+                label="Protein"
+                value={summary.total_protein_g}
+                target={targets?.protein_g ?? 0}
+              />
+              <MacroBar
+                label="Lemak"
+                value={summary.total_fat_g}
+                target={targets?.fat_g ?? 0}
+              />
+              <MacroBar
+                label="Karbo"
+                value={summary.total_carb_g}
+                target={targets?.carb_g ?? 0}
+              />
+              <div className="mt-5 flex items-center gap-2 flex-wrap">
+                <Btn variant="surface" size="xs">
+                  <Link href="/log" className="contents">
+                    Tambah snack
+                  </Link>
+                </Btn>
+                <Btn
+                  variant="ghost"
+                  size="xs"
+                  icon={<RefreshCw className="w-3 h-3" />}
+                  className="bg-transparent text-paper/85 border-paper/20 hover:bg-paper/10 hover:border-paper/30"
+                >
+                  <Link href="/plan" className="contents">
+                    Re-roll plan
+                  </Link>
+                </Btn>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* IF Timer card placeholder */}
+        <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6 relative overflow-hidden paper-grain">
+          <div className="flex items-start justify-between mb-3">
+            <Kicker>IF Timer · 16:8</Kicker>
+            <Pill tone="sun" size="sm">
+              Coming soon
+            </Pill>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="w-[88px] h-[88px] rounded-full border-2 border-clay/30 flex items-center justify-center text-center flex-shrink-0">
+              <div>
+                <div className="text-[8px] uppercase tracking-wider text-muted">
+                  Eating
+                </div>
+                <div
+                  className="tabular text-clay"
+                  style={{ fontFamily: "var(--font-serif)", fontSize: 22, lineHeight: 1 }}
+                >
+                  —
+                </div>
+              </div>
+            </div>
+            <div className="text-[13px] text-muted leading-relaxed">
+              Set IF window di <Link href="/tools/if" className="font-semibold text-clay underline">IF Timer</Link> buat tracking fasting + metabolic phases.
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* ============ Plan Today + Workout row ============ */}
+      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr] mb-4">
+        {/* Meal plan today */}
+        <PlanTodayCard planDay={planDay} activePlan={activePlan} />
+        {/* Workout next */}
+        <WorkoutNextCard
+          activeWorkout={activeWorkout}
+          nextSession={nextSession}
+          progress={workoutProgress}
+        />
+      </div>
+
+      {/* ============ Weekly chart + Weight ============ */}
+      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr] mb-4">
+        <WeeklyCard insights={weekInsights} kcalTarget={kcalTarget} today={today} />
+        <WeightCard history={weightHistory} goal={profile.goal ?? null} />
+      </div>
+
+      {/* ============ Mobile quick actions ============ */}
+      <div className="grid grid-cols-4 gap-2 mb-4 lg:hidden">
+        <QuickAction
+          href="/log"
+          icon={<Camera className="w-4 h-4" />}
+          label="Foto"
+        />
+        <QuickAction
+          href="/log"
+          icon={<Search className="w-4 h-4" />}
+          label="Cari"
+        />
+        <QuickAction
+          href="/log"
+          icon={<Scan className="w-4 h-4" />}
+          label="Scan"
+        />
+        <QuickAction
+          href="/log"
+          icon={<Scale className="w-4 h-4" />}
+          label="Berat"
+        />
+      </div>
     </div>
   );
 }
 
-function Stat({
+function MacroBar({
   label,
   value,
-  tone,
+  target,
 }: {
   label: string;
   value: number;
-  tone: "brand" | "amber" | "rose";
+  target: number;
 }) {
-  const toneClass = {
-    brand: "text-brand-600 dark:text-brand-400",
-    amber: "text-amber-600 dark:text-amber-400",
-    rose: "text-rose-600 dark:text-rose-400",
-  }[tone];
+  const pct = target > 0 ? Math.min(110, (value / target) * 100) : 0;
   return (
-    <div className="text-center px-1.5">
-      <div className={cn("font-bold tabular-nums leading-none", toneClass)}>
-        {value}
+    <div className="mb-3 last:mb-0">
+      <div className="flex items-baseline justify-between text-[11.5px] text-paper/85">
+        <span className="font-semibold">{label}</span>
+        <span className="tabular">
+          <span className="text-paper">{Math.round(value)}g</span>
+          <span className="text-paper/55"> / {Math.round(target)}</span>
+        </span>
       </div>
-      <div className="text-[9px] text-text-muted uppercase tracking-wide font-semibold mt-0.5">
-        {label}
+      <div className="mt-1 h-1.5 bg-paper/15 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-paper rounded-full transition-all"
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
+  );
+}
+
+function PlanTodayCard({
+  planDay,
+  activePlan,
+}: {
+  planDay: DayPlan | null;
+  activePlan: StoredMealPlan | null;
+}) {
+  if (!planDay || !activePlan) {
+    return (
+      <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6 flex flex-col">
+        <Kicker>Meal plan hari ini</Kicker>
+        <p className="mt-3 text-[13.5px] text-muted flex-1">
+          Belum ada plan aktif. Generate dari profil kamu dalam 60 detik.
+        </p>
+        <div className="mt-4">
+          <Btn variant="primary" size="sm">
+            <Link href="/plan" className="contents">
+              Generate plan
+            </Link>
+          </Btn>
+        </div>
+      </Card>
+    );
+  }
+  const dietLabel = activePlan.diet_method ?? "Standard";
+  const cost = planDay.est_cost_idr ?? null;
+  return (
+    <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <Kicker>Meal plan hari ini</Kicker>
+          <div className="mt-1 font-extrabold text-lg tracking-tight">
+            {dietLabel.replace(/_/g, " ")}
+            {cost ? (
+              <span className="text-muted font-medium tabular">
+                {" "}
+                · {rupiah(cost)}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <Btn
+          variant="ghost"
+          size="xs"
+          icon={<RefreshCw className="w-3 h-3" />}
+        >
+          <Link href="/plan" className="contents">
+            Re-roll
+          </Link>
+        </Btn>
+      </div>
+      <ul className="space-y-2.5">
+        {planDay.meals.slice(0, 5).map((m, i) => (
+          <li
+            key={i}
+            className="flex items-center gap-3 py-1.5 border-t border-hairline first:border-t-0"
+          >
+            <span className="text-xl flex-shrink-0">🍲</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-semibold capitalize truncate">
+                {m.slot}
+              </div>
+              <div className="text-[11px] text-muted truncate">
+                {m.items
+                  .slice(0, 3)
+                  .map((it) => it.food_name)
+                  .join(" · ")}
+              </div>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <div className="text-[12.5px] font-semibold tabular">
+                {fmtKcal(m.total_kcal)} kcal
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function WorkoutNextCard({
+  activeWorkout,
+  nextSession,
+  progress,
+}: {
+  activeWorkout: StoredWorkoutPlan | null;
+  nextSession: ReturnType<typeof findNextUnloggedSession>;
+  progress: { done: number; total: number } | null;
+}) {
+  if (!activeWorkout || !nextSession) {
+    return (
+      <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6">
+        <Kicker>Workout</Kicker>
+        <p className="mt-3 text-[13.5px] text-muted">
+          Belum ada program aktif.
+        </p>
+        <div className="mt-4">
+          <Btn variant="primary" size="sm" icon={<Dumbbell className="w-3.5 h-3.5" />}>
+            <Link href="/workout" className="contents">
+              Generate program
+            </Link>
+          </Btn>
+        </div>
+      </Card>
+    );
+  }
+  return (
+    <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6">
+      <div className="flex items-start justify-between mb-2">
+        <Kicker>Workout · sesi berikutnya</Kicker>
+        <Pill tone="default" size="sm">
+          W{nextSession.weekIdx + 1}
+        </Pill>
+      </div>
+      <h3 className="text-xl font-extrabold tracking-tight leading-tight">
+        {nextSession.session.day_label.split("·")[0]?.trim() ?? nextSession.session.day_label}{" "}
+        <span
+          className="font-normal italic text-forest"
+          style={{ fontFamily: "var(--font-serif)" }}
+        >
+          · {nextSession.session.focus}
+        </span>
+      </h3>
+      <div className="mt-1 text-[12px] text-muted tabular">
+        {nextSession.session.duration_estimate_min} mnt ·{" "}
+        {nextSession.session.main.length} gerakan ·{" "}
+        {SPLIT_LABEL[activeWorkout.split] ?? activeWorkout.split}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {nextSession.session.main.slice(0, 5).map((ex, i) => (
+          <Pill key={i} tone="default" size="sm">
+            {ex.exercise_name}
+          </Pill>
+        ))}
+      </div>
+      <div className="mt-4">
+        <Btn variant="ink" size="md" fullWidth iconRight={<Dumbbell className="w-4 h-4" />}>
+          <Link href="/workout" className="contents">
+            Mulai sesi
+          </Link>
+        </Btn>
+      </div>
+      {progress && (
+        <div className="mt-2 text-[11px] text-muted tabular">
+          Progress: {progress.done}/{progress.total} sesi
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function WeeklyCard({
+  insights,
+  kcalTarget,
+  today,
+}: {
+  insights: ReturnType<typeof getWeekInsights> | null;
+  kcalTarget: number | null;
+  today: string;
+}) {
+  if (!insights || insights.total_entries === 0) {
+    return (
+      <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6">
+        <Kicker>7 hari</Kicker>
+        <p className="mt-3 text-[13.5px] text-muted">
+          Catat 2-3 hari dulu buat lihat tren.
+        </p>
+      </Card>
+    );
+  }
+  const barData = insights.days.map((d) => {
+    const isToday = d.date === today;
+    const isEmpty = d.entry_count === 0;
+    const isOver = kcalTarget ? d.total_kcal > kcalTarget * 1.1 : false;
+    const isUnder = !isEmpty && kcalTarget ? d.total_kcal < kcalTarget * 0.7 : isEmpty;
+    return {
+      label: dayLabel3(new Date(d.date).getDay()),
+      value: d.total_kcal,
+      isToday,
+      isOver,
+      isUnder,
+    };
+  });
+  return (
+    <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <Kicker>7 hari · avg</Kicker>
+          <div
+            className="mt-1 tabular"
+            style={{ fontFamily: "var(--font-serif)", fontSize: 32, lineHeight: 1 }}
+          >
+            {fmtKcal(insights.avg_kcal)}
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Pill tone="forest" size="sm">
+            <span className="tabular">{insights.on_target_count}</span> hit
+          </Pill>
+          {insights.under_target_count > 0 && (
+            <Pill tone="default" size="sm">
+              <span className="tabular">{insights.under_target_count}</span> under
+            </Pill>
+          )}
+          {insights.over_target_count > 0 && (
+            <Pill tone="clay" size="sm">
+              <span className="tabular">{insights.over_target_count}</span> over
+            </Pill>
+          )}
+        </div>
+      </div>
+      <BarChart
+        data={barData}
+        reference={kcalTarget ?? undefined}
+        height={90}
+      />
+    </Card>
+  );
+}
+
+function WeightCard({
+  history,
+  goal,
+}: {
+  history: WeightLogEntry[];
+  goal: string | null;
+}) {
+  if (history.length === 0) {
+    return (
+      <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6">
+        <Kicker>Berat · 30 hari</Kicker>
+        <p className="mt-3 text-[13.5px] text-muted">Belum ada catatan.</p>
+        <div className="mt-3">
+          <Btn variant="ghost" size="xs" icon={<Scale className="w-3 h-3" />}>
+            <Link href="/log" className="contents">
+              Catat berat
+            </Link>
+          </Btn>
+        </div>
+      </Card>
+    );
+  }
+  const slice = history.slice(-30);
+  const first = slice[0]?.weight_kg ?? 0;
+  const last = slice[slice.length - 1]?.weight_kg ?? 0;
+  const delta = Math.round((last - first) * 10) / 10;
+  const goodDown = goal === "fat_loss" || goal === "fat_loss_aggressive";
+  const goodUp = goal === "muscle_gain" || goal === "slow_gain";
+  let deltaTone: "forest" | "rose" | "default" = "default";
+  if (delta !== 0) {
+    const isUp = delta > 0;
+    if ((goodDown && !isUp) || (goodUp && isUp)) deltaTone = "forest";
+    else deltaTone = "rose";
+  }
+  return (
+    <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6">
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <Kicker>Berat · 30 hari</Kicker>
+          <div
+            className="mt-1 tabular"
+            style={{ fontFamily: "var(--font-serif)", fontSize: 32, lineHeight: 1 }}
+          >
+            {last.toFixed(1).replace(".", ",")}
+          </div>
+        </div>
+        <Pill tone={deltaTone} size="sm">
+          {delta > 0 ? "+" : ""}
+          <span className="tabular">{delta}</span> kg
+        </Pill>
+      </div>
+      <div className="h-[60px] mt-3">
+        <Sparkline
+          values={slice.map((e) => e.weight_kg)}
+          color={
+            deltaTone === "forest"
+              ? "var(--color-forest)"
+              : deltaTone === "rose"
+                ? "var(--color-rose)"
+                : "var(--color-sky)"
+          }
+        />
+      </div>
+    </Card>
   );
 }
 
@@ -532,28 +649,18 @@ function QuickAction({
   href,
   icon,
   label,
-  tone,
 }: {
   href: string;
   icon: React.ReactNode;
   label: string;
-  tone: "brand" | "sky";
 }) {
-  const toneClass = {
-    brand:
-      "bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-100 dark:hover:bg-brand-500/20",
-    sky: "bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-500/20",
-  }[tone];
   return (
     <Link
       href={href}
-      className={cn(
-        "flex items-center gap-1.5 px-2.5 py-2.5 rounded-xl text-xs font-semibold transition-colors",
-        toneClass,
-      )}
+      className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-[14px] bg-surface border border-hairline hover:border-forest-300 hover:bg-surface-2 transition-colors"
     >
-      {icon}
-      <span className="truncate">{label}</span>
+      <span className="text-forest">{icon}</span>
+      <span className="text-[11px] font-semibold">{label}</span>
     </Link>
   );
 }
