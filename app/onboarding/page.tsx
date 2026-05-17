@@ -850,31 +850,23 @@ function AgeBracketStep({
 function InterstitialSocialProof1({ onNext }: { onNext: () => void }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-      <div className="text-7xl mb-4">🇮🇩</div>
-      <p className="text-4xl font-bold tracking-tight text-brand-600">
-        3+ juta orang
+      <div className="text-6xl mb-4">🍛</div>
+      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+        Plan kamu bakal{" "}
+        <span
+          className="italic text-clay font-normal"
+          style={{ fontFamily: "var(--font-serif)" }}
+        >
+          tau nasi padang.
+        </span>
+      </h2>
+      <p className="mt-3 text-muted max-w-sm">
+        Database TKPI Kemenkes + harga PIHPS 33 provinsi. Plan compose
+        dari makanan yang beneran kamu makan sehari-hari.
       </p>
-      <p className="mt-2 text-text-muted">
-        di Asia Tenggara udah pakai tools fitness & wellness pintar
-      </p>
-      <div className="mt-8 flex flex-wrap justify-center gap-2 max-w-md">
-        {[
-          { rating: "5.0", text: "Akhirnya bisa konsisten" },
-          { rating: "4.6", text: "14K ratings" },
-          { rating: "4.9", text: "Cocok buat pemula" },
-        ].map((t, i) => (
-          <div
-            key={i}
-            className="px-4 py-2 rounded-2xl bg-surface border border-border text-sm shadow-sm"
-          >
-            <span className="font-bold text-accent-500">{t.rating} ⭐</span>{" "}
-            <span className="text-text-muted">{t.text}</span>
-          </div>
-        ))}
-      </div>
       <button
         onClick={onNext}
-        className="mt-10 inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-fg text-bg font-semibold shadow-lg hover:-translate-y-0.5"
+        className="mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-forest text-paper font-semibold shadow-[var(--shadow-forest)] hover:-translate-y-0.5 transition-transform"
       >
         Lanjut <ArrowRight className="w-4 h-4" />
       </button>
@@ -891,28 +883,28 @@ function InterstitialSocialProof2({
   ageBracket?: UserProfile["age_bracket"];
   onNext: () => void;
 }) {
-  // Fake personalized stat — bitepal pattern
-  const labelSex = sex === "m" ? "pria" : sex === "f" ? "wanita" : "orang";
-  const labelAge = ageBracket ? ` ${ageBracket} tahun` : "";
-  const count = Math.floor(48000 + Math.random() * 14000); // 48k-62k
-
+  // Honest encouragement, no fake stats
+  void sex;
+  void ageBracket;
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-      <div className="text-5xl mb-4">🤝</div>
-      <h2 className="text-2xl font-bold tracking-tight">Kamu nggak sendirian</h2>
-      <p className="mt-3 text-text-muted max-w-xs">
-        <span className="font-bold text-fg text-3xl block mb-1">
-          {fmtNum(count)} {labelSex}
+      <div className="text-5xl mb-4">✦</div>
+      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+        Lanjut, kita{" "}
+        <span
+          className="italic text-clay font-normal"
+          style={{ fontFamily: "var(--font-serif)" }}
+        >
+          hampir selesai.
         </span>
-        {labelAge && (
-          <span>
-            usia {ageBracket} udah mulai journey-nya dengan kita.
-          </span>
-        )}
+      </h2>
+      <p className="mt-3 text-muted max-w-sm">
+        Sedikit lagi — sisanya tentang kebiasaan makan, jadwal, dan
+        budget biar plan-nya beneran masuk hidup kamu.
       </p>
       <button
         onClick={onNext}
-        className="mt-10 inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-fg text-bg font-semibold shadow-lg hover:-translate-y-0.5"
+        className="mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-forest text-paper font-semibold shadow-[var(--shadow-forest)] hover:-translate-y-0.5 transition-transform"
       >
         Lanjut <ArrowRight className="w-4 h-4" />
       </button>
