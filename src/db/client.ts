@@ -1,5 +1,5 @@
 import type DatabaseType from "better-sqlite3";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -97,23 +97,14 @@ export async function resolveDbPath(): Promise<string> {
     return _resolvedPath;
   }
 
-  const candidates = [
-    join(process.cwd(), "public", "sehatin.db"),
-    join(process.cwd(), "data", "sehatin.db"),
-  ];
-  for (const p of candidates) {
-    try {
-      if (existsSync(p)) {
-        _resolvedPath = p;
-        return p;
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-
-  // Vercel runtime fallback — fetch DB via public HTTPS URL into /tmp
+  // On Vercel the filesystem is read-only everywhere EXCEPT /tmp. Opening
+  // SQLite from read-only paths triggers "unable to open database file"
+  // on first query because SQLite tries to create a journal/WAL file
+  // alongside the DB. Always work from /tmp on Vercel.
+  const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
   const tmpPath = join(tmpdir(), "sehatin.db");
+
+  // Warm container — /tmp already has the DB from a previous request
   try {
     if (existsSync(tmpPath)) {
       _resolvedPath = tmpPath;
@@ -121,6 +112,29 @@ export async function resolveDbPath(): Promise<string> {
     }
   } catch {
     /* ignore */
+  }
+
+  // Try bundled paths. On Vercel: COPY to /tmp then return /tmp path.
+  // On local dev: open directly (cwd is writable).
+  const bundledCandidates = [
+    join(process.cwd(), "public", "sehatin.db"),
+    join(process.cwd(), "data", "sehatin.db"),
+  ];
+  for (const p of bundledCandidates) {
+    try {
+      if (existsSync(p)) {
+        if (isVercel) {
+          const buf = readFileSync(p);
+          writeFileSync(tmpPath, buf);
+          _resolvedPath = tmpPath;
+          return tmpPath;
+        }
+        _resolvedPath = p;
+        return p;
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   // Vercel Deployment Protection gates BOTH VERCEL_URL (deployment-specific)
