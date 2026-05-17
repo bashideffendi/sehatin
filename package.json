@@ -9,6 +9,7 @@
     "start": "next start",
     "scrape:off": "tsx scripts/scrape-off.ts",
     "scrape:usda": "tsx scripts/scrape-usda.ts",
+    "import:curated": "tsx scripts/curate-id-foods.ts",
     "import:pihps": "tsx scripts/import-pihps.ts",
     "import:tkpi": "tsx scripts/import-tkpi.ts",
     "export:foods": "tsx scripts/export-foods-json.ts",

@@ -38,13 +38,14 @@ interface CompactFoodOut {
 
 const db = getDb(getDbPath());
 
-// Pull TKPI + OFF + USDA together. OFF always Olahan, USDA mostly Mentah.
+// Pull TKPI + OFF + USDA + curated_id together. OFF always Olahan,
+// USDA mostly Mentah, curated_id always Olahan (jajanan/dish jadi).
 const rows = db
   .prepare(`
     SELECT source, source_id, name, brand, categories,
            kcal_per_100g, protein_per_100g, fat_per_100g, carb_per_100g, fiber_per_100g
     FROM foods
-    WHERE source IN ('tkpi', 'openfoodfacts', 'usda')
+    WHERE source IN ('tkpi', 'openfoodfacts', 'usda', 'curated_id')
       AND kcal_per_100g IS NOT NULL
     ORDER BY source, name
   `)
@@ -62,6 +63,20 @@ const foods: CompactFoodOut[] = rows.map((r) => {
       name: r.name,
       kategori,
       tipe,
+      kcal: r.kcal_per_100g,
+      p: r.protein_per_100g,
+      f: r.fat_per_100g,
+      c: r.carb_per_100g,
+      fib: r.fiber_per_100g,
+    };
+  }
+  if (r.source === "curated_id") {
+    // Hand-curated Indonesian dishes — chain restaurants, jajanan, makanan jadi
+    return {
+      code: `ID-${r.source_id}`,
+      name: r.name,
+      kategori: r.categories ?? "Makanan jadi Indonesia",
+      tipe: "Olahan",
       kcal: r.kcal_per_100g,
       p: r.protein_per_100g,
       f: r.fat_per_100g,
@@ -142,8 +157,11 @@ writeFileSync(outPath, JSON.stringify(output));
 const size = (JSON.stringify(output).length / 1024).toFixed(1);
 const offCount = foods.filter((f) => f.code.startsWith("OFF-")).length;
 const usdaCount = foods.filter((f) => f.code.startsWith("USDA-")).length;
-const tkpiCount = foods.length - offCount - usdaCount;
+const idCount = foods.filter((f) => f.code.startsWith("ID-")).length;
+const tkpiCount = foods.length - offCount - usdaCount - idCount;
 console.log(`Exported ${foods.length} foods → ${outPath} (${size} KB)`);
-console.log(`  TKPI: ${tkpiCount} · OpenFoodFacts: ${offCount} · USDA: ${usdaCount}`);
+console.log(
+  `  TKPI: ${tkpiCount} · OFF: ${offCount} · USDA: ${usdaCount} · Curated ID: ${idCount}`,
+);
 
 db.close();
