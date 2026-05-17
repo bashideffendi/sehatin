@@ -35,9 +35,13 @@ export default function RootLayout({
   return (
     <html lang="id">
       <head>
+        {/* Fonts loaded via @import in globals.css (Plus Jakarta Sans + Instrument Serif).
+            Preconnect for performance. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet"
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
         />
       </head>
       <body className="min-h-screen flex flex-col antialiased">

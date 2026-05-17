@@ -1,111 +1,196 @@
-@import "tailwindcss";
-
 /*
-  Sehatin design tokens
-  --------------------------------
-  Primary  : emerald-600   (vitality, growth, health credibility)
-  Accent   : amber-500     (energy, food warmth, fun)
-  Info     : sky-500       (hydration, calm metrics)
-  Surface  : zinc tone     (modern minimal)
+  ─────────────────────────────────────────────────────────────────
+  Sehatin — globals.css (Tailwind v4)
+  Design: paper · forest · clay (editorial wellness, premium-fun, ID-first)
+  Headlines: pair Plus Jakarta Sans (sans) + Instrument Serif italic (display)
+  ─────────────────────────────────────────────────────────────────
 */
 
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap');
+
+/* ─── Brand tokens (Tailwind v4 @theme) ───────────────────────────── */
 @theme {
-  --color-brand-50: #ecfdf5;
-  --color-brand-100: #d1fae5;
-  --color-brand-200: #a7f3d0;
-  --color-brand-300: #6ee7b7;
-  --color-brand-400: #34d399;
-  --color-brand-500: #10b981;
-  --color-brand-600: #059669;
-  --color-brand-700: #047857;
-  --color-brand-800: #065f46;
-  --color-brand-900: #064e3b;
+  /* surfaces */
+  --color-paper:        #FBF7EE;
+  --color-paper-deep:   #F1ECDF;
+  --color-surface:      #FFFFFF;
+  --color-surface-2:    #F7F2E7;
 
-  --color-accent-50: #fffbeb;
-  --color-accent-100: #fef3c7;
-  --color-accent-200: #fde68a;
-  --color-accent-300: #fcd34d;
-  --color-accent-400: #fbbf24;
-  --color-accent-500: #f59e0b;
-  --color-accent-600: #d97706;
-  --color-accent-700: #b45309;
+  /* ink (warm near-black) */
+  --color-ink:          #181613;
+  --color-ink-2:        #3A352E;
+  --color-muted:        #76705F;
 
-  --font-display:
-    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* hairlines */
+  --color-hairline:     rgba(24,22,19,0.08);
+  --color-hairline-2:   rgba(24,22,19,0.14);
+
+  /* forest (primary) */
+  --color-forest-50:    #EEF4F0;
+  --color-forest-100:   #D9E7DE;
+  --color-forest-300:   #6FAE94;
+  --color-forest-500:   #2E6B58;
+  --color-forest:       #1F4D3F;   /* default */
+  --color-forest-700:   #143A2E;
+
+  /* clay (accent) */
+  --color-clay-50:      #FBEFE5;
+  --color-clay-100:     #F6DDC4;
+  --color-clay-300:     #E89561;
+  --color-clay:         #C8632A;   /* default */
+  --color-clay-700:     #A24E1F;
+
+  /* sun (energy) */
+  --color-sun-50:       #FEF8DF;
+  --color-sun:          #F4C842;
+  --color-sun-700:      #8A6A0F;
+
+  /* support */
+  --color-sky:          #4C8EAF;
+  --color-sky-50:       #E8F1F6;
+  --color-sky-300:      #7BAEC8;
+  --color-rose:         #C95566;
+  --color-rose-50:      #FBEAEC;
+
+  /* type */
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: 'Instrument Serif', 'Times New Roman', Georgia, serif;
+  --font-display: var(--font-sans);
+
+  /* radii */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+
+  /* shadows */
+  --shadow-paper-1: 0 1px 0 rgba(24,22,19,0.04), 0 2px 6px rgba(24,22,19,0.04);
+  --shadow-paper-2: 0 4px 12px rgba(24,22,19,0.06), 0 1px 3px rgba(24,22,19,0.04);
+  --shadow-paper-3: 0 12px 40px rgba(24,22,19,0.10), 0 4px 14px rgba(24,22,19,0.06);
+  --shadow-forest: 0 8px 28px rgba(31,77,63,0.20), 0 2px 6px rgba(31,77,63,0.12);
+
+  /* ─── Compatibility aliases for legacy brand-/accent- usages ─── */
+  /* Existing components still reference these — they'll render with
+     new colors until those screens are refactored in Phase 2. */
+  --color-brand-50:    var(--color-forest-50);
+  --color-brand-100:   var(--color-forest-100);
+  --color-brand-200:   var(--color-forest-100);
+  --color-brand-300:   var(--color-forest-300);
+  --color-brand-400:   var(--color-forest-300);
+  --color-brand-500:   var(--color-forest);
+  --color-brand-600:   var(--color-forest);
+  --color-brand-700:   var(--color-forest-700);
+  --color-brand-800:   var(--color-forest-700);
+  --color-brand-900:   var(--color-forest-700);
+
+  --color-accent-50:   var(--color-clay-50);
+  --color-accent-100:  var(--color-clay-100);
+  --color-accent-200:  var(--color-clay-100);
+  --color-accent-300:  var(--color-clay-300);
+  --color-accent-400:  var(--color-clay-300);
+  --color-accent-500:  var(--color-clay);
+  --color-accent-600:  var(--color-clay);
+  --color-accent-700:  var(--color-clay-700);
+
+  --color-bg:             var(--color-paper);
+  --color-fg:             var(--color-ink);
+  --color-surface-muted:  var(--color-surface-2);
+  --color-border:         var(--color-hairline);
+  --color-text-muted:     var(--color-muted);
 }
 
-:root {
-  --background: #fafaf9;
-  --foreground: #1c1917;
-  --surface: #ffffff;
-  --surface-muted: #f5f5f4;
-  --border: #e7e5e4;
-  --text-muted: #78716c;
+/* ─── Dark theme — same tokens, swapped values ────────────────────── */
+.dark, [data-theme="dark"] {
+  --color-paper:        #11140F;
+  --color-paper-deep:   #0A0D08;
+  --color-surface:      #181B15;
+  --color-surface-2:    #1F2319;
+  --color-ink:          #F0EBE0;
+  --color-ink-2:        #C8C3B6;
+  --color-muted:        #8A8472;
+  --color-hairline:     rgba(240,235,224,0.08);
+  --color-hairline-2:   rgba(240,235,224,0.16);
+  --color-forest:       #5BAA90;
+  --color-forest-500:   #6FBFA4;
+  --color-forest-50:    rgba(91,170,144,0.08);
+  --color-forest-100:   rgba(91,170,144,0.16);
+  --color-clay:         #E89561;
+  --color-clay-50:      rgba(232,149,97,0.08);
+  --color-clay-100:     rgba(232,149,97,0.18);
+  --color-sun-50:       rgba(244,200,66,0.12);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0a09;
-    --foreground: #f5f5f4;
-    --surface: #1c1917;
-    --surface-muted: #292524;
-    --border: #292524;
-    --text-muted: #a8a29e;
-  }
-}
-
-@theme {
-  --color-bg: var(--background);
-  --color-fg: var(--foreground);
-  --color-surface: var(--surface);
-  --color-surface-muted: var(--surface-muted);
-  --color-border: var(--border);
-  --color-text-muted: var(--text-muted);
-}
-
-html,
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-display);
+/* ─── Base ────────────────────────────────────────────────────────── */
+html, body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.005em;
 }
 
 * {
-  @apply border-border;
+  @apply border-hairline;
 }
 
-/* Smooth transitions for theme + interactive elements */
-button,
-a,
-input,
-select {
+button, a, input, select {
   @apply transition-colors duration-150;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 8px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+/* ─── Utility classes used across screens ─────────────────────────── */
+
+/* Editorial serif italic — for headline moments, big numbers */
+.serif    { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.01em; font-style: normal; }
+.serif-it { font-family: var(--font-serif); font-weight: 400; font-style: italic; letter-spacing: -0.01em; }
+.tabular  { font-variant-numeric: tabular-nums; }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* Kicker — small uppercase label above titles */
+.kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
 }
 
-/* Gradient blob backgrounds for hero / accents */
+/* Big number — editorial serif for kcal/etc */
+.num-xl { font-family: var(--font-serif); font-size: 56px; line-height: 1; font-weight: 400; letter-spacing: -0.02em; }
+.num-lg { font-family: var(--font-serif); font-size: 36px; line-height: 1; font-weight: 400; letter-spacing: -0.015em; }
+.num-md { font-family: var(--font-serif); font-size: 24px; line-height: 1; font-weight: 400; }
+
+/* Paper grain & dot grid backgrounds */
+.paper-grain {
+  background-image:
+    radial-gradient(circle at 20% 80%, rgba(200,99,42,0.045), transparent 55%),
+    radial-gradient(circle at 90% 10%, rgba(31,77,63,0.055), transparent 50%);
+}
+.dot-grid {
+  background-image: radial-gradient(rgba(24,22,19,0.10) 0.7px, transparent 0.8px);
+  background-size: 14px 14px;
+}
+
+/* Hero gradient orb */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Lift hover for clickable cards */
+.lift { transition: transform .15s, box-shadow .15s, border-color .15s; cursor: pointer; }
+.lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-paper-2); }
+
+/* Legacy compat: gradient-mesh used in older landing — keep working */
 .gradient-mesh {
   background-image:
-    radial-gradient(at 30% 20%, rgb(16 185 129 / 0.18) 0px, transparent 50%),
-    radial-gradient(at 75% 40%, rgb(245 158 11 / 0.12) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgb(56 189 248 / 0.10) 0px, transparent 50%);
+    radial-gradient(at 30% 20%, rgba(31,77,63,0.10) 0px, transparent 50%),
+    radial-gradient(at 75% 40%, rgba(200,99,42,0.08) 0px, transparent 50%);
 }
 
 /* Animated pulse for live indicators (IF timer) */
@@ -117,7 +202,8 @@ select {
   animation: pulse-soft 2.5s ease-in-out infinite;
 }
 
-/* Number tabular styling for metrics */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-hairline-2); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
