@@ -31,12 +31,20 @@ export default function HomePage() {
 
   useEffect(() => {
     (async () => {
-      // Check real Supabase auth session
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const isAuthed = !!user;
+      // Check Supabase auth session (graceful if env vars missing)
+      let isAuthed = false;
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        isAuthed = !!user;
+      } catch (e) {
+        console.warn(
+          "[home] Supabase not configured, falling back to no-auth",
+          e,
+        );
+      }
       setAuthed(isAuthed);
 
       // If authed AND there's localStorage data, run one-time migration
