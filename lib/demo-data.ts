@@ -22,6 +22,7 @@ import {
   type StoredWorkoutPlan,
 } from "./workout";
 import { upsertSession } from "./workout-log";
+import { markEnteredApp } from "./session";
 
 /** Pad 2-digit. */
 function pad2(n: number): string {
@@ -830,6 +831,9 @@ export function loadDemoData(): void {
   // ===== Clear first (fresh slate) =====
   clearAllSehatinData();
 
+  // ===== Mark session (entered app) =====
+  markEnteredApp();
+
   // ===== Profile =====
   saveProfile(DEMO_PROFILE);
 
@@ -953,6 +957,7 @@ export function clearAllSehatinData(): void {
     "sehatin:meal_plan:v1",
     "sehatin:workout_plan:v1",
     "sehatin:workout_log:v1",
+    "sehatin:session:v1", // session flag — so Clear → back to landing
   ];
   for (const k of KEYS) {
     window.localStorage.removeItem(k);

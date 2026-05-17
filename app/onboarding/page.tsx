@@ -187,6 +187,8 @@ export default function OnboardingPage() {
   useEffect(() => {
     const existing = loadProfile();
     if (existing) setProfile(existing);
+    // Mark session — user has entered the app
+    import("@/lib/session").then((m) => m.markEnteredApp());
   }, []);
 
   useEffect(() => {

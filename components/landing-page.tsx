@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Pill, Btn, Card, Kicker, Logo } from "@/components/ui";
 import { DemoButton } from "@/components/demo-button";
+import { markEnteredApp } from "@/lib/session";
 
 export function LandingPage() {
   return (
