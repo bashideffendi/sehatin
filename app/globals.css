@@ -207,3 +207,7 @@ button, a, input, select {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-hairline-2); border-radius: 8px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
+
+/* Hide scrollbar on specific elements (e.g. horizontal swipe strips on mobile) */
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }

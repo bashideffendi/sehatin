@@ -221,22 +221,23 @@ export function Dashboard({ profile }: Props) {
       {/* ============ Hero row: Kalori + IF Timer ============ */}
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr] mb-4">
         {/* Kalori donut card — forest */}
-        <Card surface="forest" radius="xl" shadow="paper-2" className="overflow-hidden p-6 sm:p-8">
-          <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+        <Card surface="forest" radius="xl" shadow="paper-2" className="overflow-hidden p-5 sm:p-7 lg:p-8">
+          <div className="flex items-center gap-4 sm:gap-6 lg:gap-8">
             <Donut
               value={kcalToday}
               target={kcalTarget ?? 2000}
-              size={180}
-              stroke={16}
+              size={150}
+              stroke={14}
               color="var(--color-paper)"
               track="rgba(255,255,255,0.15)"
+              className="flex-shrink-0"
             >
               <div className="text-[9px] font-bold uppercase tracking-wider text-paper/70">
                 Kalori
               </div>
               <div
-                className="tabular mt-1 text-paper"
-                style={{ fontFamily: "var(--font-serif)", fontSize: 40, lineHeight: 1 }}
+                className="tabular mt-1 text-paper text-[34px] sm:text-[40px]"
+                style={{ fontFamily: "var(--font-serif)", lineHeight: 1 }}
               >
                 {fmtKcal(kcalToday)}
               </div>

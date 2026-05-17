@@ -507,7 +507,8 @@ export default function PlanPage() {
       </div>
 
       {/* ============ Day strip ============ */}
-      <div className="grid grid-cols-7 gap-1.5 mb-5">
+      {/* Mobile: horizontal scroll (cards 90px wide) · md+: 7-col grid */}
+      <div className="flex md:grid md:grid-cols-7 gap-1.5 mb-5 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 pb-1 scrollbar-none">
         {plan.plan.days.map((d, i) => {
           const dateIso = shiftISODate(plan.start_date, i);
           const isToday = dateIso === todayISO();
@@ -523,7 +524,7 @@ export default function PlanPage() {
                 setAppliedDayIdx(null);
               }}
               className={cn(
-                "rounded-[14px] border px-3 py-3 text-left transition-all",
+                "rounded-[14px] border px-3 py-3 text-left transition-all flex-shrink-0 w-[80px] md:w-auto",
                 isActive
                   ? "bg-forest text-paper border-forest shadow-[var(--shadow-forest)]"
                   : "bg-surface border-hairline hover:border-hairline-2",
