@@ -12,7 +12,7 @@
  * }
  */
 import { NextResponse } from "next/server";
-import { getDb, getDbPath } from "@/src/db/client";
+import { getDbAsync } from "@/src/db/client";
 import { analyzePhoto } from "@/src/nutrition/analyze";
 import { calculateTargets } from "@/src/nutrition/tdee";
 import type { UserProfile } from "@/lib/profile";
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const db = getDb(getDbPath());
+  const db = await getDbAsync();
   try {
     const result = await analyzePhoto(
       db,
