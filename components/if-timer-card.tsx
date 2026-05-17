@@ -5,104 +5,151 @@ import { Pill } from "@/components/ui";
 import { getDailySummary, todayISO } from "@/lib/food-log";
 
 interface FastingState {
-  mode: "fasting" | "eating";
+  mode: "fasting" | "eating" | "idle";
   elapsedMin: number;
   protocolFastMin: number;
   protocolEatMin: number;
-  eatingStartHHMM: string;
-  fastingStartHHMM: string;
+  /** Time when eating window will OPEN next (HH:MM). For fasting mode. */
+  nextEatingOpenHHMM: string | null;
+  /** Time when eating window will CLOSE (HH:MM). For eating mode. */
+  eatingCloseHHMM: string | null;
+  /** Time of last meal (HH:MM) — for fasting context */
+  lastMealHHMM: string | null;
   phase: { label: string; tone: "sun" | "clay" | "forest" | "sky" };
 }
 
-// Compute current fasting/eating state from last meal in food_log
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function tsToHHMM(ts: number): string {
+  const d = new Date(ts);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function todayLocalISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function yesterdayLocalISO(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/**
+ * Compute current fasting/eating state from actual food_log.
+ *
+ * Logic (16:8 protocol):
+ * - "Eating window" opens with the FIRST meal of the day, lasts 8 hours.
+ * - If now < first_meal + 8h → mode = "eating", elapsed = now - first_meal.
+ * - Else → mode = "fasting", elapsed = now - last_meal (i.e. time since last bite).
+ * - If no meals at all yet → mode = "idle", elapsed = 0.
+ */
 function computeFastingState(): FastingState {
   const PROTOCOL_FAST_MIN = 16 * 60;
   const PROTOCOL_EAT_MIN = 8 * 60;
-  // Eating window assumed 14:00 - 22:00 (16:8 protocol)
-  const EATING_START_HOUR = 14;
-  const EATING_END_HOUR = 22;
 
   const now = new Date();
-  const summary = getDailySummary(todayISO());
-  // Find latest meal across today + yesterday
-  let lastMealTs: number | null = null;
-  if (summary) {
-    for (const e of summary.entries) {
-      const ts = new Date(e.created_at).getTime();
-      if (!lastMealTs || ts > lastMealTs) lastMealTs = ts;
+  const nowTs = now.getTime();
+
+  // Gather meals from today + yesterday
+  const todayEntries = getDailySummary(todayLocalISO()).entries;
+  const yesterdayEntries = getDailySummary(yesterdayLocalISO()).entries;
+
+  const todaySorted = [...todayEntries].sort((a, b) =>
+    a.created_at.localeCompare(b.created_at),
+  );
+  const yesterdaySorted = [...yesterdayEntries].sort((a, b) =>
+    a.created_at.localeCompare(b.created_at),
+  );
+
+  const firstMealToday = todaySorted[0]
+    ? new Date(todaySorted[0].created_at).getTime()
+    : null;
+  const lastMealToday = todaySorted[todaySorted.length - 1]
+    ? new Date(todaySorted[todaySorted.length - 1].created_at).getTime()
+    : null;
+  const lastMealYesterday = yesterdaySorted[yesterdaySorted.length - 1]
+    ? new Date(yesterdaySorted[yesterdaySorted.length - 1].created_at).getTime()
+    : null;
+
+  const lastMealTs = lastMealToday ?? lastMealYesterday;
+
+  // No meals at all → idle state (haven't started yet)
+  if (!firstMealToday && !lastMealYesterday) {
+    return {
+      mode: "idle",
+      elapsedMin: 0,
+      protocolFastMin: PROTOCOL_FAST_MIN,
+      protocolEatMin: PROTOCOL_EAT_MIN,
+      nextEatingOpenHHMM: null,
+      eatingCloseHHMM: null,
+      lastMealHHMM: null,
+      phase: { label: "Belum mulai", tone: "sky" },
+    };
+  }
+
+  // If user had first meal today, eating window = first_meal → first_meal + 8h
+  if (firstMealToday) {
+    const eatingEndTs = firstMealToday + PROTOCOL_EAT_MIN * 60 * 1000;
+    if (nowTs < eatingEndTs) {
+      // Still in eating window
+      const elapsedMin = Math.max(
+        0,
+        Math.round((nowTs - firstMealToday) / 60000),
+      );
+      return {
+        mode: "eating",
+        elapsedMin,
+        protocolFastMin: PROTOCOL_FAST_MIN,
+        protocolEatMin: PROTOCOL_EAT_MIN,
+        nextEatingOpenHHMM: null,
+        eatingCloseHHMM: tsToHHMM(eatingEndTs),
+        lastMealHHMM: lastMealTs ? tsToHHMM(lastMealTs) : null,
+        phase: { label: "Eating window", tone: "forest" },
+      };
     }
-  }
-  // Also check yesterday in case nothing today yet
-  if (!lastMealTs) {
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const ymd = yesterday.toISOString().slice(0, 10);
-    const ySum = getDailySummary(ymd);
-    if (ySum) {
-      for (const e of ySum.entries) {
-        const ts = new Date(e.created_at).getTime();
-        if (!lastMealTs || ts > lastMealTs) lastMealTs = ts;
-      }
-    }
-  }
-
-  const currentHour = now.getHours();
-  const inEatingWindow =
-    currentHour >= EATING_START_HOUR && currentHour < EATING_END_HOUR;
-
-  let mode: "fasting" | "eating" = inEatingWindow ? "eating" : "fasting";
-  let elapsedMin: number;
-  if (mode === "eating") {
-    const eatingStart = new Date(now);
-    eatingStart.setHours(EATING_START_HOUR, 0, 0, 0);
-    elapsedMin = Math.max(0, Math.round((now.getTime() - eatingStart.getTime()) / 60000));
-  } else {
-    // Fasting: elapsed since eating window ended (22:00 yesterday or today)
-    const eatingEnd = new Date(now);
-    if (currentHour >= EATING_END_HOUR) {
-      eatingEnd.setHours(EATING_END_HOUR, 0, 0, 0);
-    } else {
-      // currentHour < EATING_START_HOUR (early morning), fasting started 22:00 yesterday
-      eatingEnd.setDate(eatingEnd.getDate() - 1);
-      eatingEnd.setHours(EATING_END_HOUR, 0, 0, 0);
-    }
-    elapsedMin = Math.max(0, Math.round((now.getTime() - eatingEnd.getTime()) / 60000));
+    // Past eating window → fasting from last meal today
+    const fastStartTs = lastMealToday ?? eatingEndTs;
+    const elapsedMin = Math.max(0, Math.round((nowTs - fastStartTs) / 60000));
+    const nextWindowTs = firstMealToday + 24 * 60 * 60 * 1000; // tomorrow same time
+    return {
+      mode: "fasting",
+      elapsedMin,
+      protocolFastMin: PROTOCOL_FAST_MIN,
+      protocolEatMin: PROTOCOL_EAT_MIN,
+      nextEatingOpenHHMM: tsToHHMM(nextWindowTs),
+      eatingCloseHHMM: null,
+      lastMealHHMM: lastMealTs ? tsToHHMM(lastMealTs) : null,
+      phase: phaseFromHours(elapsedMin / 60),
+    };
   }
 
-  // If last meal exists and is more recent than computed start, use it
-  if (lastMealTs && mode === "fasting") {
-    const elapsedFromMeal = Math.round((now.getTime() - lastMealTs) / 60000);
-    if (elapsedFromMeal > 0 && elapsedFromMeal < PROTOCOL_FAST_MIN) {
-      elapsedMin = elapsedFromMeal;
-    }
-  }
-
-  // Phase based on fasting hours
-  const hours = elapsedMin / 60;
-  let phase: FastingState["phase"];
-  if (mode === "eating") {
-    phase = { label: "Eating window", tone: "forest" };
-  } else if (hours < 4) {
-    phase = { label: "Anabolic", tone: "sky" };
-  } else if (hours < 12) {
-    phase = { label: "Glikogen", tone: "sky" };
-  } else if (hours < 18) {
-    phase = { label: "Ketosis ringan", tone: "sun" };
-  } else if (hours < 24) {
-    phase = { label: "Autofagi", tone: "clay" };
-  } else {
-    phase = { label: "Deep ketosis", tone: "clay" };
-  }
-
+  // No meals today, but had meals yesterday → fasting since yesterday's last meal
+  const elapsedMin = Math.max(
+    0,
+    Math.round((nowTs - (lastMealYesterday as number)) / 60000),
+  );
   return {
-    mode,
+    mode: "fasting",
     elapsedMin,
     protocolFastMin: PROTOCOL_FAST_MIN,
     protocolEatMin: PROTOCOL_EAT_MIN,
-    eatingStartHHMM: `${String(EATING_START_HOUR).padStart(2, "0")}:00`,
-    fastingStartHHMM: `${String(EATING_END_HOUR).padStart(2, "0")}:00`,
-    phase,
+    nextEatingOpenHHMM: null,
+    eatingCloseHHMM: null,
+    lastMealHHMM: lastMealYesterday ? tsToHHMM(lastMealYesterday) : null,
+    phase: phaseFromHours(elapsedMin / 60),
   };
+}
+
+function phaseFromHours(hours: number): FastingState["phase"] {
+  if (hours < 4) return { label: "Anabolic", tone: "sky" };
+  if (hours < 12) return { label: "Glikogen", tone: "sky" };
+  if (hours < 18) return { label: "Ketosis ringan", tone: "sun" };
+  if (hours < 24) return { label: "Autofagi", tone: "clay" };
+  return { label: "Deep ketosis", tone: "clay" };
 }
 
 function fmtHHMM(min: number): string {
@@ -197,7 +244,11 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <div className="text-[9px] font-bold uppercase tracking-wider text-clay">
-              {state.mode === "fasting" ? "Fasting" : "Eating"}
+              {state.mode === "fasting"
+                ? "Fasting"
+                : state.mode === "eating"
+                  ? "Eating"
+                  : "Idle"}
             </div>
             <div
               className="tabular mt-0.5 leading-none"
@@ -209,7 +260,11 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
               {fmtHHMM(state.elapsedMin)}
             </div>
             <div className="text-[8.5px] text-muted mt-0.5">
-              dari {state.mode === "fasting" ? "16:00" : "08:00"}
+              {state.mode === "fasting"
+                ? `dari 16:00`
+                : state.mode === "eating"
+                  ? `dari 08:00`
+                  : `belum mulai`}
             </div>
           </div>
         </div>
@@ -217,13 +272,24 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
         {/* Right side: copy + button */}
         <div className="flex-1 min-w-0">
           <p className="text-[12px] text-muted leading-relaxed">
-            {state.mode === "fasting" ? (
+            {state.mode === "fasting" && state.lastMealHHMM ? (
               <>
-                Eating window dibuka jam{" "}
+                Terakhir makan jam{" "}
                 <span className="font-bold text-ink tabular">
-                  {state.eatingStartHHMM}
+                  {state.lastMealHHMM}
                 </span>
-                .
+                .{" "}
+                {state.nextEatingOpenHHMM ? (
+                  <>
+                    Buka next window{" "}
+                    <span className="font-semibold text-clay tabular">
+                      {state.nextEatingOpenHHMM}
+                    </span>
+                    .
+                  </>
+                ) : (
+                  <>Catat meal pertama buat buka eating window.</>
+                )}
                 {ramadanActive ? (
                   <>
                     {" "}Mode Ramadan otomatis aktif{" "}
@@ -231,14 +297,25 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
                   </>
                 ) : null}
               </>
-            ) : (
+            ) : state.mode === "eating" ? (
               <>
                 Window selesai jam{" "}
                 <span className="font-bold text-ink tabular">
-                  {state.fastingStartHHMM}
+                  {state.eatingCloseHHMM ?? "—"}
                 </span>
-                .
+                .{" "}
+                {state.lastMealHHMM && (
+                  <>
+                    Terakhir makan{" "}
+                    <span className="font-semibold text-clay tabular">
+                      {state.lastMealHHMM}
+                    </span>
+                    .
+                  </>
+                )}
               </>
+            ) : (
+              <>Catat meal pertama buat mulai tracking.</>
             )}
           </p>
           <Link
