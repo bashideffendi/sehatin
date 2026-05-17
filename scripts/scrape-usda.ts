@@ -1,86 +1,149 @@
 /**
- * Scrape USDA FoodData Central buat foods yang TKPI gak punya/jelek:
- *  - International proteins (salmon, sardines, tuna kalengan)
- *  - Dairy modern (greek yogurt, cottage cheese, mozzarella)
- *  - Western breakfast (oats, granola, peanut butter)
- *  - Exotic veggies (kale, asparagus, brussels sprouts)
- *  - Western fruits (blueberry, strawberry, raspberry, kiwi)
- *  - Grains alt (quinoa, barley, buckwheat)
- *  - Chain restaurant items (McDonald's, KFC, Starbucks, Subway)
+ * Scrape USDA FoodData Central — broad coverage of foods Indonesian users
+ * search for. Includes Branded foods (chain restaurants + packaged products)
+ * for much wider coverage.
  *
  * Run: USDA_API_KEY=xxx npm run scrape:usda
- * Tanpa API key, pake DEMO_KEY (30 req/hour limit).
- * Daftar API key gratis: https://api.data.gov/signup/
  */
 import "dotenv/config";
 import { getDb, getDbPath } from "../src/db/client.ts";
 import { createSchema } from "../src/db/schema.ts";
 import { scrapeUsda } from "../src/scrapers/usda.ts";
 
-// Curated query list — fokus ke gap yang TKPI gak cover well.
-// Skip nasi/ayam/sayur dasar yang TKPI udah punya.
+// Broader query list — single-word terms get more results.
+// Mix of: proteins, dairy, veggies, fruits, grains, nuts/seeds, oils,
+// snacks, drinks, condiments, restaurant chains.
 const QUERIES = [
-  // === International proteins ===
-  "salmon raw",
-  "salmon cooked",
-  "sardines canned",
-  "tuna canned in water",
-  "shrimp cooked",
-  "chicken breast skinless roasted",
-  "ground beef cooked",
-  "egg whole boiled",
-  // === Dairy modern ===
-  "greek yogurt plain nonfat",
-  "cottage cheese low fat",
-  "mozzarella cheese",
-  "cheddar cheese",
-  "ricotta cheese",
+  // === Proteins ===
+  "salmon",
+  "tuna",
+  "sardines",
+  "mackerel",
+  "shrimp",
+  "lobster",
+  "crab",
+  "chicken breast",
+  "chicken thigh",
+  "chicken wing",
+  "turkey breast",
+  "beef sirloin",
+  "beef ground",
+  "pork chop",
+  "lamb",
+  "duck",
+  "tofu firm",
+  "tempeh",
+  "egg whole",
+  "egg white",
+  // === Dairy ===
+  "yogurt greek",
+  "yogurt regular",
+  "cheese mozzarella",
+  "cheese cheddar",
+  "cheese feta",
+  "cheese cottage",
   "milk whole",
-  "almond milk unsweetened",
-  // === Western breakfast ===
-  "oats rolled",
-  "granola",
-  "peanut butter smooth",
-  "almond butter",
-  "honey",
-  "maple syrup",
-  // === Exotic veggies ===
-  "kale raw",
-  "asparagus raw",
-  "brussels sprouts raw",
-  "bell pepper red raw",
-  "zucchini raw",
-  "mushroom button",
-  // === Western fruits ===
-  "blueberry raw",
-  "strawberry raw",
-  "raspberry raw",
-  "kiwi green raw",
-  "grapes raw",
-  "pineapple raw",
-  // === Grain alternatives ===
-  "quinoa cooked",
-  "barley cooked",
-  "buckwheat cooked",
-  "wild rice cooked",
-  "pasta whole wheat cooked",
+  "milk skim",
+  "milk almond",
+  "milk soy",
+  "milk oat",
+  "butter unsalted",
+  "cream cheese",
+  // === Vegetables ===
+  "spinach",
+  "kale",
+  "broccoli",
+  "cauliflower",
+  "carrot",
+  "tomato",
+  "cucumber",
+  "lettuce",
+  "onion",
+  "garlic",
+  "ginger",
+  "bell pepper",
+  "zucchini",
+  "asparagus",
+  "brussels sprouts",
+  "mushroom",
+  "eggplant",
+  "celery",
+  "sweet potato",
+  "potato",
+  // === Fruits ===
+  "banana",
+  "apple",
+  "orange",
+  "mango",
+  "strawberry",
+  "blueberry",
+  "raspberry",
+  "grapes",
+  "watermelon",
+  "papaya",
+  "pineapple",
+  "kiwi",
+  "avocado",
+  "lemon",
+  "lime",
+  // === Grains & legumes ===
+  "rice white",
+  "rice brown",
+  "quinoa",
+  "oats",
+  "barley",
+  "pasta",
+  "bread whole wheat",
+  "lentils",
+  "chickpeas",
+  "black beans",
+  "kidney beans",
   // === Nuts & seeds ===
-  "almonds raw",
-  "walnuts raw",
-  "cashew nuts raw",
+  "almonds",
+  "walnuts",
+  "cashews",
+  "peanuts",
+  "pistachios",
   "chia seeds",
   "flax seeds",
   "sunflower seeds",
-  // === Fats ===
+  "pumpkin seeds",
+  "sesame seeds",
+  // === Oils & fats ===
   "olive oil",
   "coconut oil",
   "avocado oil",
-  // === Chain restaurant ===
-  "McDonald's Big Mac",
-  "McDonald's chicken nuggets",
-  "KFC Original Recipe Chicken",
-  "Starbucks Caffe Latte",
-  "Subway 6 inch turkey",
+  "canola oil",
+  // === Sweeteners ===
+  "honey",
+  "maple syrup",
+  "sugar brown",
+  // === Snacks ===
+  "popcorn",
+  "potato chips",
+  "tortilla chips",
+  "protein bar",
+  "granola bar",
+  // === Beverages ===
+  "coffee black",
+  "tea green",
+  "orange juice",
+  "coconut water",
+  // === Restaurant chains (Branded) ===
+  "McDonald's",
+  "KFC",
+  "Starbucks",
+  "Subway",
+  "Burger King",
+  "Pizza Hut",
+  "Domino's",
+  // === Condiments ===
+  "soy sauce",
+  "mayonnaise",
+  "ketchup",
+  "mustard",
+  "hot sauce",
+  "salsa",
 ];
 
 const db = getDb(getDbPath());
@@ -91,8 +154,7 @@ const isDemo = apiKey === "DEMO_KEY";
 
 console.log(`USDA FoodData Central — ${QUERIES.length} queries`);
 if (isDemo) {
-  console.log("⚠️  Pakai DEMO_KEY (30 req/hour). Set USDA_API_KEY env buat 1000/hour.");
-  console.log("    Daftar gratis: https://api.data.gov/signup/");
+  console.log("⚠️  DEMO_KEY: 30 req/jam. Set USDA_API_KEY di .env.");
 }
 console.log("");
 
@@ -102,12 +164,13 @@ try {
     db,
     apiKey,
     queries: QUERIES,
-    resultsPerQuery: 3,
-    rateLimitMs: isDemo ? 2500 : 600,
+    resultsPerQuery: 10,
+    dataTypes: ["Foundation", "SR Legacy", "Branded"],
+    rateLimitMs: isDemo ? 2500 : 350,
     onProgress: (p) => {
       const status = p.found === 0 ? "❌" : "✓";
       console.log(
-        `  ${status} "${p.query}" — ${p.found} found, ${p.inserted} new, ${p.updated} updated`,
+        `  ${status} "${p.query}" — ${p.found} found, ${p.inserted} new, ${p.updated} upd`,
       );
     },
   });
@@ -115,14 +178,11 @@ try {
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log("");
   console.log(`Done in ${elapsed}s`);
-  console.log(`  Queries run:     ${result.queriesRun}`);
+  console.log(`  Queries:         ${result.queriesRun}`);
   console.log(`  Items inserted:  ${result.itemsInserted}`);
   console.log(`  Items updated:   ${result.itemsUpdated}`);
   if (result.errors.length > 0) {
     console.log(`  Errors:          ${result.errors.length}`);
-    for (const e of result.errors.slice(0, 5)) {
-      console.log(`    - "${e.query}": ${e.error.slice(0, 100)}`);
-    }
   }
 
   const totalUsda = db
