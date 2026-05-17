@@ -178,15 +178,15 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
 
   const totalMin = state.mode === "fasting" ? state.protocolFastMin : state.protocolEatMin;
   const pct = Math.min(1, state.elapsedMin / totalMin);
-  const size = 144;
-  const stroke = 11;
+  const size = 130;
+  const stroke = 10;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference * (1 - pct);
   const gradId = "if-card-grad";
 
   return (
-    <div className="bg-surface rounded-[28px] border border-hairline shadow-[var(--shadow-paper-1)] p-6 sm:p-7 h-full relative overflow-hidden flex flex-col">
+    <div className="bg-surface rounded-[28px] border border-hairline shadow-[var(--shadow-paper-1)] p-5 sm:p-7 h-full relative overflow-hidden flex flex-col">
       {/* Sun radial gradient — fills top-right + bleeds across upper-right quadrant */}
       <span
         className="absolute -top-24 -right-24 w-80 h-80 rounded-full pointer-events-none"
@@ -215,7 +215,7 @@ export function IfTimerCard({ ramadanActive }: { ramadanActive?: boolean }) {
       </div>
 
       {/* ===== Main row: donut LEFT + body RIGHT, vertically centered to fill ===== */}
-      <div className="relative z-10 flex items-center gap-5 flex-1">
+      <div className="relative z-10 flex items-center gap-4 sm:gap-5 flex-1">
         {/* Donut */}
         <div
           className="relative flex-shrink-0"
