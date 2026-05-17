@@ -157,7 +157,27 @@ export async function POST(req: Request) {
     },
   };
 
-  const db = await getDbAsync();
+  let db;
+  try {
+    db = await getDbAsync();
+  } catch (e) {
+    const msg = (e as Error).message;
+    console.error("[/api/plan] DB resolve failed:", msg);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `DB init: ${msg}`,
+        debug: {
+          cwd: process.cwd(),
+          vercel_url: process.env.VERCEL_URL ?? null,
+          vercel_project_production_url:
+            process.env.VERCEL_PROJECT_PRODUCTION_URL ?? null,
+          db_path_env: process.env.DB_PATH ?? null,
+        },
+      },
+      { status: 500 },
+    );
+  }
   try {
     const result = await generateMealPlan(db, mealReq, {
       dryRun: body.dry_run ?? false,
