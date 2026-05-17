@@ -434,26 +434,22 @@ export default function PlanPage() {
     <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8 pb-12">
       {/* ============ Header ============ */}
       <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
-        <div className="min-w-0 relative">
+        <div className="min-w-0">
           <Kicker>Plan · minggu ini</Kicker>
-          <div className="mt-1.5 relative inline-block">
-            <h1 className="text-[34px] sm:text-[44px] font-extrabold tracking-tight leading-[1.05]">
-              {dietLabel}{" "}
-              <span className="text-clay font-extrabold">+</span>
-            </h1>
-            {/* Decorative serif italic overlay */}
+          <h1 className="mt-1.5 text-[34px] sm:text-[44px] font-extrabold tracking-tight leading-[1.05]">
+            {dietLabel}{" "}
+            <span className="text-clay font-extrabold">+</span>{" "}
             <span
-              className="absolute -bottom-3 left-2 sm:left-4 italic text-clay opacity-80 pointer-events-none select-none"
+              className="italic text-clay font-normal whitespace-nowrap"
               style={{
                 fontFamily: "var(--font-serif)",
-                fontSize: 32,
-                lineHeight: 1,
+                fontSize: "0.78em",
               }}
             >
               warteg.
             </span>
-          </div>
-          <p className="mt-5 text-[12.5px] text-muted tabular">
+          </h1>
+          <p className="mt-2 text-[12.5px] text-muted tabular">
             {budgetPerDay ? `${rupiahShort(budgetPerDay)}/hari · ` : ""}
             {plan.targets.target_kcal} kcal/hari
             {halal ? ` · ${halal}` : ""}
@@ -552,19 +548,19 @@ export default function PlanPage() {
               </div>
               <div
                 className={cn(
-                  "text-[10.5px] mt-1 tabular",
+                  "text-[10.5px] mt-1 tabular flex items-baseline gap-1",
                   isActive ? "text-paper/75" : "text-muted",
                 )}
               >
-                {d.total_kcal > 0 ? `${(d.total_kcal / 1000).toFixed(1)}k` : "—"}
+                <span>{d.total_kcal > 0 ? `${(d.total_kcal / 1000).toFixed(1)}k` : "—"}</span>
                 {isToday && (
                   <span
                     className={cn(
-                      "ml-1 text-[9px] font-bold uppercase",
+                      "text-[8.5px] font-bold uppercase tracking-wider",
                       isActive ? "text-paper" : "text-forest",
                     )}
                   >
-                    · ini
+                    ini
                   </span>
                 )}
               </div>
@@ -1005,7 +1001,14 @@ function MealRow({
   // Display first item as the headline, rest as subtitle items
   const head = meal.items[0];
   const restCount = meal.items.length - 1;
-  const allItemsText = meal.items.map((it) => it.food_name).join(" · ");
+  // Sub: if multiple items, list ADDITIONAL items (after first). If single, show portion + source hint.
+  const subText =
+    meal.items.length > 1
+      ? meal.items
+          .slice(1)
+          .map((it) => it.food_name)
+          .join(" · ")
+      : `${head.portion_g}g · 1 porsi`;
 
   return (
     <div className="group relative pl-2 py-2 rounded-[14px] hover:bg-surface-2/60 transition-colors">
@@ -1030,7 +1033,7 @@ function MealRow({
             )}
           </div>
           <div className="text-[10.5px] text-muted truncate mt-0.5">
-            {allItemsText}
+            {subText}
           </div>
           {(head.protein_g != null || head.fat_g != null || head.carb_g != null) && (
             <div className="text-[10px] text-muted/85 mt-1 tabular space-x-2">

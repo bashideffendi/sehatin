@@ -28,7 +28,7 @@ const REST_TIMER_INITIAL = 60; // seconds
 function focusEmojiBig(focus: string): string {
   const f = focus.toLowerCase();
   if (f.includes("push") || f.includes("dada") || f.includes("chest")) return "💪";
-  if (f.includes("pull") || f.includes("punggung") || f.includes("back")) return "🪢";
+  if (f.includes("pull") || f.includes("punggung") || f.includes("back")) return "💪";
   if (f.includes("leg") || f.includes("quad") || f.includes("posterior")) return "🦵";
   return "💪";
 }

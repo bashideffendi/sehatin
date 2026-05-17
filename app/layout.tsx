@@ -50,11 +50,11 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen antialiased bg-paper text-ink">
+      <body className="min-h-screen antialiased bg-paper text-ink overflow-x-hidden">
         <div className="md:flex md:items-stretch md:min-h-screen">
           <Nav />
           <div className="flex-1 min-w-0 flex flex-col">
-            <main className="flex-1 pb-24 md:pb-0">{children}</main>
+            <main className="flex-1 pb-24 md:pb-0 overflow-x-hidden">{children}</main>
             <Footer />
           </div>
         </div>

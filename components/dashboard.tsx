@@ -38,7 +38,16 @@ import {
 import { getWeekInsights, getStreak } from "@/lib/insights";
 import { Pill, Btn, Card, Kicker, Donut, BarChart, Sparkline } from "@/components/ui";
 import { CoachInsight } from "@/components/coach-insight";
-import { fmtKcal, rupiah } from "@/lib/format";
+import { IfTimerCard } from "@/components/if-timer-card";
+import { fmtKcal, rupiah, rupiahShort } from "@/lib/format";
+import {
+  MEAL_SLOT_LABEL,
+  MEAL_SLOT_EMOJI,
+  MEAL_SLOT_DEFAULT_HOUR,
+  type MealSlot,
+} from "@/lib/food-log";
+import { normalizeSlot } from "@/lib/meal-plan";
+import { Check } from "lucide-react";
 
 function timeOfDayGreeting(): string {
   const h = new Date().getHours();
@@ -146,8 +155,28 @@ export function Dashboard({ profile }: Props) {
   const remaining = kcalTarget ? Math.max(0, kcalTarget - kcalToday) : null;
   const todayDate = new Date();
 
+  const firstName = (profile.name ?? "kamu").split(" ")[0];
+  // Smart sub-copy based on remaining kcal + time of day
+  const subCopy = remaining === null
+    ? null
+    : remaining <= 0
+      ? "Target hari ini udah hit · jaga aja jangan over."
+      : (() => {
+          const h = todayDate.getHours();
+          if (h < 11) {
+            const meals = Math.max(1, Math.round(remaining / 600));
+            return `cukup buat ${meals} meal lagi.`;
+          }
+          if (h < 15) return `cukup buat makan malam + 1 snack.`;
+          if (h < 19) return `cukup buat makan malam.`;
+          return `cukup buat 1 snack ringan.`;
+        })();
+
+  // Ramadan mode check
+  const ramadanActive = profile.active_modes?.includes("ramadan") ?? false;
+
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8 overflow-x-hidden">
       {/* ============ Header ============ */}
       <div className="flex items-start justify-between gap-4 flex-wrap mb-6 sm:mb-8">
         <div>
@@ -155,20 +184,19 @@ export function Dashboard({ profile }: Props) {
           <h1 className="mt-2 text-3xl sm:text-[44px] font-extrabold tracking-tight leading-tight">
             {timeOfDayGreeting()},{" "}
             <span
-              className="font-normal italic text-forest"
+              className="font-normal italic text-clay"
               style={{ fontFamily: "var(--font-serif)" }}
             >
-              {profile.name ?? "kamu"}
+              {firstName}
             </span>
             .
           </h1>
           {remaining !== null && (
             <p className="mt-1 text-[13.5px] text-muted">
-              Sisa{" "}
               <span className="tabular font-semibold text-ink">
                 {fmtKcal(remaining)}
               </span>{" "}
-              kcal · cukup buat 2-3 meal lagi
+              kcal · {subCopy}
             </p>
           )}
         </div>
@@ -255,39 +283,20 @@ export function Dashboard({ profile }: Props) {
           </div>
         </Card>
 
-        {/* IF Timer card placeholder */}
-        <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6 relative overflow-hidden paper-grain">
-          <div className="flex items-start justify-between mb-3">
-            <Kicker>IF Timer · 16:8</Kicker>
-            <Pill tone="sun" size="sm">
-              Coming soon
-            </Pill>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="w-[88px] h-[88px] rounded-full border-2 border-clay/30 flex items-center justify-center text-center flex-shrink-0">
-              <div>
-                <div className="text-[8px] uppercase tracking-wider text-muted">
-                  Eating
-                </div>
-                <div
-                  className="tabular text-clay"
-                  style={{ fontFamily: "var(--font-serif)", fontSize: 22, lineHeight: 1 }}
-                >
-                  —
-                </div>
-              </div>
-            </div>
-            <div className="text-[13px] text-muted leading-relaxed">
-              Set IF window di <Link href="/tools/if" className="font-semibold text-clay underline">IF Timer</Link> buat tracking fasting + metabolic phases.
-            </div>
-          </div>
-        </Card>
+        {/* IF Timer card — real fasting state */}
+        <IfTimerCard ramadanActive={ramadanActive} />
       </div>
 
       {/* ============ Plan Today + Workout row ============ */}
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr] mb-4">
         {/* Meal plan today */}
-        <PlanTodayCard planDay={planDay} activePlan={activePlan} />
+        <PlanTodayCard
+          planDay={planDay}
+          activePlan={activePlan}
+          loggedSlots={
+            new Set(summary?.entries.map((e) => e.meal_slot) ?? [])
+          }
+        />
         {/* Workout next */}
         <WorkoutNextCard
           activeWorkout={activeWorkout}
@@ -366,9 +375,11 @@ function MacroBar({
 function PlanTodayCard({
   planDay,
   activePlan,
+  loggedSlots,
 }: {
   planDay: DayPlan | null;
   activePlan: StoredMealPlan | null;
+  loggedSlots: Set<MealSlot>;
 }) {
   if (!planDay || !activePlan) {
     return (
@@ -387,15 +398,30 @@ function PlanTodayCard({
       </Card>
     );
   }
-  const dietLabel = activePlan.diet_method ?? "Standard";
+  const dietLabel = activePlan.diet_method
+    ? activePlan.diet_method.charAt(0).toUpperCase() + activePlan.diet_method.slice(1).replace(/_/g, " ")
+    : "Standard";
   const cost = planDay.est_cost_idr ?? null;
+
+  // Compute upcoming meal — first un-logged meal whose hour > current hour
+  const nowHour = new Date().getHours();
+  const slotInfo = planDay.meals.map((m) => {
+    const slot = normalizeSlot(m.slot);
+    const hour = slot ? MEAL_SLOT_DEFAULT_HOUR[slot] : 12;
+    return { m, slot, hour, isLogged: slot ? loggedSlots.has(slot) : false };
+  });
+  // "Berikutnya" = the first non-logged meal still in the future (or the next one chronologically)
+  const upcomingIdx = slotInfo.findIndex((s) => !s.isLogged && s.hour >= nowHour);
+  const fallbackIdx = slotInfo.findIndex((s) => !s.isLogged);
+  const berikutnyaIdx = upcomingIdx >= 0 ? upcomingIdx : fallbackIdx;
+
   return (
-    <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6">
-      <div className="flex items-start justify-between mb-3">
-        <div>
+    <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6 min-w-0">
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="min-w-0">
           <Kicker>Meal plan hari ini</Kicker>
-          <div className="mt-1 font-extrabold text-lg tracking-tight">
-            {dietLabel.replace(/_/g, " ")}
+          <div className="mt-1 font-extrabold text-lg tracking-tight truncate">
+            {dietLabel}
             {cost ? (
               <span className="text-muted font-medium tabular">
                 {" "}
@@ -414,31 +440,74 @@ function PlanTodayCard({
           </Link>
         </Btn>
       </div>
-      <ul className="space-y-2.5">
-        {planDay.meals.slice(0, 5).map((m, i) => (
-          <li
-            key={i}
-            className="flex items-center gap-3 py-1.5 border-t border-hairline first:border-t-0"
-          >
-            <span className="text-xl flex-shrink-0">🍲</span>
-            <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-semibold capitalize truncate">
-                {m.slot}
+      <ul className="space-y-1">
+        {slotInfo.slice(0, 5).map(({ m, slot, hour, isLogged }, i) => {
+          const isBerikutnya = i === berikutnyaIdx;
+          const timeStr = `${String(hour).padStart(2, "0")}:00`;
+          const headItem = m.items[0];
+          // Build a short sub: portion if single, else extra items list
+          let sub = "";
+          if (m.items.length > 1) {
+            sub = m.items
+              .slice(1)
+              .map((it) => it.food_name.split(" ")[0])
+              .join(" · ");
+          } else if (headItem) {
+            sub = `${headItem.portion_g}g · 1 porsi`;
+          }
+          // Approx per-meal cost: split day cost evenly
+          const mealCost = cost ? Math.round(cost / planDay.meals.length) : null;
+          return (
+            <li
+              key={i}
+              className={`flex items-center gap-3 py-2 px-2 -mx-2 rounded-[10px] ${
+                isBerikutnya ? "bg-clay-50/60 border border-clay/20" : ""
+              }`}
+            >
+              <span className="text-[10px] font-bold tabular text-muted w-[34px] flex-shrink-0 text-right">
+                {timeStr}
+              </span>
+              <span className="text-xl flex-shrink-0">
+                {slot ? MEAL_SLOT_EMOJI[slot] : "🍽️"}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="text-[13px] font-bold tracking-tight truncate">
+                    {headItem?.food_name ?? m.slot}
+                  </span>
+                  {isBerikutnya && (
+                    <Pill tone="clay" size="sm">
+                      Berikutnya
+                    </Pill>
+                  )}
+                </div>
+                {sub && (
+                  <div className="text-[10.5px] text-muted truncate">{sub}</div>
+                )}
               </div>
-              <div className="text-[11px] text-muted truncate">
-                {m.items
-                  .slice(0, 3)
-                  .map((it) => it.food_name)
-                  .join(" · ")}
+              <div className="text-right flex-shrink-0">
+                <div className="text-[12px] font-bold tabular leading-none">
+                  {fmtKcal(m.total_kcal)}
+                  <span className="text-[9px] text-muted font-medium ml-0.5">
+                    kcal
+                  </span>
+                </div>
+                {mealCost && (
+                  <div className="text-[9.5px] text-muted tabular mt-0.5">
+                    {rupiah(mealCost)}
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="text-right flex-shrink-0">
-              <div className="text-[12.5px] font-semibold tabular">
-                {fmtKcal(m.total_kcal)} kcal
-              </div>
-            </div>
-          </li>
-        ))}
+              {isLogged ? (
+                <span className="w-5 h-5 rounded-full bg-forest text-paper inline-flex items-center justify-center flex-shrink-0">
+                  <Check className="w-3 h-3" />
+                </span>
+              ) : (
+                <span className="w-5 h-5 rounded-full border border-hairline-2 flex-shrink-0" />
+              )}
+            </li>
+          );
+        })}
       </ul>
     </Card>
   );
@@ -470,27 +539,41 @@ function WorkoutNextCard({
       </Card>
     );
   }
+  // Parse a friendly title from day_label like "Selasa (Upper Push)" → ["Selasa", "Upper Push"]
+  const dayLabel = nextSession.session.day_label;
+  const titleMatch = dayLabel.match(/^(.+?)\s*[\(·]\s*(.+?)[\)]?$/);
+  const dayName = titleMatch ? titleMatch[1].trim() : dayLabel;
+  const focusName = titleMatch ? titleMatch[2].trim() : nextSession.session.focus;
+
+  // Equipment summary — short form
+  const eqShort = "Home · DB";
+
+  // Recommended start time — assume 17:00 default
+  const startTime = "17:00";
+
   return (
-    <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6">
-      <div className="flex items-start justify-between mb-2">
-        <Kicker>Workout · sesi berikutnya</Kicker>
-        <Pill tone="default" size="sm">
+    <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6 min-w-0">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+          Workout · {startTime}
+        </div>
+        <Pill tone="ink" size="sm">
           W{nextSession.weekIdx + 1}
         </Pill>
       </div>
-      <h3 className="text-xl font-extrabold tracking-tight leading-tight">
-        {nextSession.session.day_label.split("·")[0]?.trim() ?? nextSession.session.day_label}{" "}
+      <h3 className="text-[22px] font-extrabold tracking-tight leading-[1.1]">
+        {dayName.replace(/Senin/i, "Push Day").replace(/Selasa/i, "Leg Day").replace(/Rabu/i, "Rest").replace(/Kamis/i, "Pull Day").replace(/Jumat/i, "Rest").replace(/Sabtu/i, "Lower Day").replace(/Minggu/i, "Rest")}{" "}
+        ·{" "}
         <span
-          className="font-normal italic text-forest"
+          className="font-normal italic text-clay"
           style={{ fontFamily: "var(--font-serif)" }}
         >
-          · {nextSession.session.focus}
+          {focusName.toLowerCase().replace("push", "dada & bahu").replace("pull", "punggung & biceps").replace("quads", "kaki depan").replace("posterior", "kaki belakang")}
         </span>
       </h3>
-      <div className="mt-1 text-[12px] text-muted tabular">
+      <div className="mt-1.5 text-[11.5px] text-muted tabular">
         {nextSession.session.duration_estimate_min} mnt ·{" "}
-        {nextSession.session.main.length} gerakan ·{" "}
-        {SPLIT_LABEL[activeWorkout.split] ?? activeWorkout.split}
+        {nextSession.session.main.length} gerakan · {eqShort}
       </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {nextSession.session.main.slice(0, 5).map((ex, i) => (
@@ -500,8 +583,8 @@ function WorkoutNextCard({
         ))}
       </div>
       <div className="mt-4">
-        <Btn variant="ink" size="md" fullWidth iconRight={<Dumbbell className="w-4 h-4" />}>
-          <Link href="/workout" className="contents">
+        <Btn variant="ink" size="md" fullWidth icon={<Dumbbell className="w-4 h-4" />}>
+          <Link href="/workout/session" className="contents">
             Mulai sesi
           </Link>
         </Btn>

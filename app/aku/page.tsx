@@ -70,7 +70,7 @@ const ALLERGY_LABEL: Record<string, string> = {
   susu_laktosa: "Susu",
   telur: "Telur",
   gandum_gluten: "Gluten",
-  seafood_kerang: "Seafood",
+  seafood_kerang: "Udang",
   ikan: "Ikan",
   kedelai: "Kedelai",
   wijen: "Wijen",

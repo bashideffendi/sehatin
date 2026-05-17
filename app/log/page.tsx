@@ -289,18 +289,55 @@ export default function LogPage() {
             onChange={(d) => setDate(d)}
             highlightedDates={loggedDates}
           >
-            <h1
-              className="font-extrabold tracking-tight leading-none mt-2"
-              style={{ fontSize: 32 }}
-            >
-              {formatDateID(date) === "Hari ini" ||
-              formatDateID(date) === "Kemarin"
-                ? formatDateID(date)
-                : new Date(date).toLocaleDateString("id-ID", {
-                    weekday: "short",
-                    day: "numeric",
-                    month: "short",
-                  })}
+            <h1 className="font-extrabold tracking-tight leading-tight mt-2 text-[32px] sm:text-[40px]">
+              {(() => {
+                const d = new Date(date);
+                const today = todayISO();
+                const yesterday = shiftDate(today, -1);
+                if (date === today) {
+                  return (
+                    <>
+                      Hari{" "}
+                      <span
+                        className="italic text-clay font-normal"
+                        style={{ fontFamily: "var(--font-serif)" }}
+                      >
+                        ini.
+                      </span>
+                    </>
+                  );
+                }
+                if (date === yesterday) {
+                  return (
+                    <>
+                      Ke{" "}
+                      <span
+                        className="italic text-clay font-normal"
+                        style={{ fontFamily: "var(--font-serif)" }}
+                      >
+                        marin.
+                      </span>
+                    </>
+                  );
+                }
+                const weekday = d.toLocaleDateString("id-ID", { weekday: "long" });
+                const day = d.getDate();
+                const month = d.toLocaleDateString("id-ID", { month: "short" });
+                return (
+                  <>
+                    {weekday},{" "}
+                    <span
+                      className="italic text-clay font-normal"
+                      style={{ fontFamily: "var(--font-serif)" }}
+                    >
+                      {day}
+                    </span>{" "}
+                    <span className="text-muted font-normal text-[0.7em]">
+                      {month}.
+                    </span>
+                  </>
+                );
+              })()}
             </h1>
           </DatePopover>
         </div>

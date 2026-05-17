@@ -168,15 +168,22 @@ const TODAY_FOOD_ENTRIES: DemoFoodEntry[] = [
 ];
 
 // ============================================================
-// PAST 6 DAYS FOOD LOG — for weekly chart
+// PAST 13 DAYS FOOD LOG — for weekly chart + streak (14 hari)
 // ============================================================
-const PAST_WEEK_DAILY_KCAL = [
-  { daysAgo: 6, kcal: 2080 }, // Wed
-  { daysAgo: 5, kcal: 1920 }, // Thu
-  { daysAgo: 4, kcal: 2350 }, // Fri (cheat day-ish)
-  { daysAgo: 3, kcal: 1680 }, // Sat
-  { daysAgo: 2, kcal: 1850 }, // Sun
-  { daysAgo: 1, kcal: 1990 }, // Mon (yesterday)
+const PAST_WEEK_DAILY_KCAL: { daysAgo: number; kcal: number }[] = [
+  { daysAgo: 1, kcal: 1990 },
+  { daysAgo: 2, kcal: 1850 },
+  { daysAgo: 3, kcal: 1680 },
+  { daysAgo: 4, kcal: 2350 },
+  { daysAgo: 5, kcal: 1920 },
+  { daysAgo: 6, kcal: 2080 },
+  { daysAgo: 7, kcal: 1840 },
+  { daysAgo: 8, kcal: 1950 },
+  { daysAgo: 9, kcal: 2120 },
+  { daysAgo: 10, kcal: 1880 },
+  { daysAgo: 11, kcal: 1990 },
+  { daysAgo: 12, kcal: 1740 },
+  { daysAgo: 13, kcal: 2050 },
 ];
 
 // ============================================================

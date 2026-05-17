@@ -72,7 +72,7 @@ function dayShort(label: string): string {
 function focusEmoji(focus: string): string {
   const f = focus.toLowerCase();
   if (f.includes("push") || f.includes("dada") || f.includes("chest")) return "💪";
-  if (f.includes("pull") || f.includes("punggung") || f.includes("back")) return "🪢";
+  if (f.includes("pull") || f.includes("punggung") || f.includes("back")) return "💪";
   if (f.includes("leg") || f.includes("quad") || f.includes("posterior")) return "🦵";
   if (f.includes("upper") || f.includes("atas")) return "🔝";
   if (f.includes("core") || f.includes("perut")) return "🎯";
@@ -356,24 +356,21 @@ export default function WorkoutPage() {
     <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 pb-12">
       {/* ============ Header ============ */}
       <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
-        <div className="min-w-0 relative">
+        <div className="min-w-0">
           <Kicker>Program {plan.weeks}-minggu</Kicker>
-          <div className="mt-1.5 relative inline-block">
-            <h1 className="text-[34px] sm:text-[44px] font-extrabold tracking-tight leading-[1.05]">
-              {goalDisplay.split(" ")[0]} ·
-            </h1>
+          <h1 className="mt-1.5 text-[34px] sm:text-[44px] font-extrabold tracking-tight leading-[1.05]">
+            {goalDisplay.split(" ")[0]} ·{" "}
             <span
-              className="absolute -bottom-2 left-2 italic text-clay opacity-90 pointer-events-none select-none"
+              className="italic text-clay font-normal whitespace-nowrap"
               style={{
                 fontFamily: "var(--font-serif)",
-                fontSize: 30,
-                lineHeight: 1,
+                fontSize: "0.78em",
               }}
             >
-              {splitDisplay.toLowerCase()}.
+              {splitDisplay.toLowerCase().replace(" / ", "/")}.
             </span>
-          </div>
-          <p className="mt-5 text-[12.5px] text-muted tabular">
+          </h1>
+          <p className="mt-2 text-[12.5px] text-muted tabular">
             {(profile?.equipment_available ?? []).join(" · ") || "bodyweight"} ·
             progressive overload
           </p>
