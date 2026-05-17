@@ -15,6 +15,7 @@ export function WizardShell({
   onBack,
   onSkip,
   cta,
+  wide,
   children,
 }: {
   current: number;
@@ -27,6 +28,12 @@ export function WizardShell({
    * scroll position. Pass a `<WizardCta />` or any button-like ReactNode.
    */
   cta?: ReactNode;
+  /**
+   * When true, expands the content area max-width from `max-w-2xl` (672px) to
+   * `max-w-5xl` (1024px). Use for content-heavy steps like result/summary
+   * that benefit from 2-column layouts on wide screens. Default: false.
+   */
+  wide?: boolean;
   children: ReactNode;
 }) {
   const pct = Math.min(100, Math.max(0, (current / total) * 100));
@@ -170,15 +177,27 @@ export function WizardShell({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 px-4 md:px-10 lg:px-14 py-4 md:py-6 max-w-2xl w-full">
+        {/* Content — centered horizontally within the right panel */}
+        <div
+          className={cn(
+            "flex-1 px-4 md:px-10 lg:px-14 py-4 md:py-6 w-full mx-auto",
+            wide ? "max-w-5xl" : "max-w-2xl",
+          )}
+        >
           {children}
         </div>
 
         {/* Sticky bottom CTA bar (visible regardless of scroll) */}
         {cta && (
           <div className="sticky bottom-0 z-20 bg-paper/95 backdrop-blur-sm border-t border-hairline px-4 md:px-10 lg:px-14 py-3 md:py-4">
-            <div className="max-w-2xl w-full">{cta}</div>
+            <div
+              className={cn(
+                "w-full mx-auto",
+                wide ? "max-w-5xl" : "max-w-2xl",
+              )}
+            >
+              {cta}
+            </div>
           </div>
         )}
       </main>

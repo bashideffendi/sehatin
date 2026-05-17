@@ -323,6 +323,15 @@ export default function OnboardingPage() {
     />
   ) : undefined;
 
+  // Content-heavy steps use wider container (max-w-5xl) + 2-column layouts
+  // to reduce vertical scroll. Default (max-w-2xl) keeps option steps focused.
+  const wideContent =
+    step === "result" ||
+    step === "is_summary" ||
+    step === "calculating" ||
+    step === "is_prediction_1" ||
+    step === "is_prediction_2";
+
   return (
     <WizardShell
       current={progressCurrent}
@@ -337,6 +346,7 @@ export default function OnboardingPage() {
           : undefined
       }
       cta={stickyCta}
+      wide={wideContent}
     >
       <div className="flex flex-col">
         {/* IDENTITY ===================================== */}
@@ -2291,6 +2301,7 @@ function ResultStep({
 
   return (
     <div className="space-y-6 py-4">
+      {/* Header — spans full width above the 2-column grid */}
       <div className="text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-4xl mb-3 shadow-lg">
           🎉
@@ -2303,118 +2314,128 @@ function ResultStep({
         </p>
       </div>
 
-      <div className="p-6 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-xl shadow-brand-600/20">
-        <div className="flex items-center gap-2 text-brand-100 text-sm font-medium">
-          <Flame className="w-4 h-4" />
-          Target kalori harian
-        </div>
-        <div className="mt-1 flex items-baseline gap-2">
-          <span className="text-5xl font-bold tabular-nums">
-            {fmtNum(targets.target_kcal)}
-          </span>
-          <span className="text-brand-100">kcal</span>
-        </div>
-        <div className="mt-2 text-sm text-brand-100">
-          {targets.goal_adjustment_pct > 0 ? "+" : ""}
-          {targets.goal_adjustment_pct.toFixed(0)}% vs TDEE ({fmtNum(targets.tdee)} kcal)
-          {dietPreset?.macro_split && <> · {dietPreset.label_id}</>}
-        </div>
-      </div>
+      {/* 2-column grid on lg+: targets/CTAs left, insights/profile right */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* LEFT column: kalori card + macros + CTAs */}
+        <div className="space-y-4">
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-xl shadow-brand-600/20">
+            <div className="flex items-center gap-2 text-brand-100 text-sm font-medium">
+              <Flame className="w-4 h-4" />
+              Target kalori harian
+            </div>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-5xl font-bold tabular-nums">
+                {fmtNum(targets.target_kcal)}
+              </span>
+              <span className="text-brand-100">kcal</span>
+            </div>
+            <div className="mt-2 text-sm text-brand-100">
+              {targets.goal_adjustment_pct > 0 ? "+" : ""}
+              {targets.goal_adjustment_pct.toFixed(0)}% vs TDEE ({fmtNum(targets.tdee)} kcal)
+              {dietPreset?.macro_split && <> · {dietPreset.label_id}</>}
+            </div>
+          </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <MacroPill
-          icon={<Beef className="w-4 h-4" />}
-          label="Protein"
-          grams={targets.protein_g}
-          color="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
-        />
-        <MacroPill
-          icon={<Droplet className="w-4 h-4" />}
-          label="Lemak"
-          grams={targets.fat_g}
-          color="bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
-        />
-        <MacroPill
-          icon={<Wheat className="w-4 h-4" />}
-          label="Karbo"
-          grams={targets.carb_g}
-          color="bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
-        />
-      </div>
+          <div className="grid grid-cols-3 gap-3">
+            <MacroPill
+              icon={<Beef className="w-4 h-4" />}
+              label="Protein"
+              grams={targets.protein_g}
+              color="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+            />
+            <MacroPill
+              icon={<Droplet className="w-4 h-4" />}
+              label="Lemak"
+              grams={targets.fat_g}
+              color="bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+            />
+            <MacroPill
+              icon={<Wheat className="w-4 h-4" />}
+              label="Karbo"
+              grams={targets.carb_g}
+              color="bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
+            />
+          </div>
 
-      {/* Personalized insights based on full profile */}
-      <PersonalizedInsights profile={profile} />
-
-      <div className="p-5 rounded-2xl bg-surface border border-border">
-        <h3 className="font-semibold mb-3 tracking-tight">Ringkasan profil</h3>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <StatItem label="Usia" value={`${profile.age} thn`} />
-          <StatItem label="JK" value={profile.sex === "m" ? "Pria" : "Wanita"} />
-          <StatItem label="Berat" value={`${profile.weight_kg} kg`} />
-          <StatItem label="Target" value={`${profile.target_weight_kg ?? "—"} kg`} />
-          <StatItem label="Tinggi" value={`${profile.height_cm} cm`} />
-          <StatItem
-            label="Aktivitas"
-            value={profile.activity?.replace("_", " ") ?? "—"}
-          />
-          <StatItem label="Diet" value={dietPreset?.label_id ?? "—"} />
-          <StatItem
-            label="Tidur"
-            value={
-              profile.sleep_duration === "lt5"
-                ? "<5h"
-                : profile.sleep_duration === "5_6"
-                  ? "5-6h"
-                  : profile.sleep_duration === "7_8"
-                    ? "7-8h"
-                    : profile.sleep_duration === "gt8"
-                      ? ">8h"
-                      : "—"
-            }
-          />
-          {profile.budget_idr_per_day && (
-            <div className="col-span-2">
-              <div className="text-text-muted text-xs">Budget makan/hari</div>
-              <div className="font-semibold tabular-nums">
-                Rp {fmtNum(profile.budget_idr_per_day)}
-              </div>
+          {/* Auto-generate AI plan + workout (idle state — CTAs) */}
+          {autoGen === "idle" && (
+            <div className="space-y-3 pt-2">
+              <button
+                onClick={() =>
+                  handleAutoGenerate(profile, {
+                    setAutoGen,
+                    setPlanDone,
+                    setWorkoutDone,
+                    setAutoGenErrors,
+                    onGoHome,
+                  })
+                }
+                className="w-full px-6 py-4 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white font-bold shadow-lg shadow-brand-600/30 hover:-translate-y-0.5 hover:shadow-xl transition-all flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-5 h-5" />
+                Generate plan + workout pertama (~60s)
+              </button>
+              <button
+                onClick={onGoHome}
+                className="w-full px-6 py-3 rounded-2xl bg-surface border-2 border-border font-semibold hover:border-brand-300 transition-all"
+              >
+                Lewati, ke dashboard
+              </button>
+              <button
+                onClick={onGoTdee}
+                className="w-full text-xs text-text-muted hover:text-fg font-medium underline-offset-2 hover:underline pt-1"
+              >
+                Lihat detail TDEE & macro
+              </button>
             </div>
           )}
         </div>
+
+        {/* RIGHT column: insights + ringkasan profil */}
+        <div className="space-y-4">
+          {/* Personalized insights based on full profile */}
+          <PersonalizedInsights profile={profile} />
+
+          <div className="p-5 rounded-2xl bg-surface border border-border">
+            <h3 className="font-semibold mb-3 tracking-tight">Ringkasan profil</h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <StatItem label="Usia" value={`${profile.age} thn`} />
+              <StatItem label="JK" value={profile.sex === "m" ? "Pria" : "Wanita"} />
+              <StatItem label="Berat" value={`${profile.weight_kg} kg`} />
+              <StatItem label="Target" value={`${profile.target_weight_kg ?? "—"} kg`} />
+              <StatItem label="Tinggi" value={`${profile.height_cm} cm`} />
+              <StatItem
+                label="Aktivitas"
+                value={profile.activity?.replace("_", " ") ?? "—"}
+              />
+              <StatItem label="Diet" value={dietPreset?.label_id ?? "—"} />
+              <StatItem
+                label="Tidur"
+                value={
+                  profile.sleep_duration === "lt5"
+                    ? "<5h"
+                    : profile.sleep_duration === "5_6"
+                      ? "5-6h"
+                      : profile.sleep_duration === "7_8"
+                        ? "7-8h"
+                        : profile.sleep_duration === "gt8"
+                          ? ">8h"
+                          : "—"
+                }
+              />
+              {profile.budget_idr_per_day && (
+                <div className="col-span-2">
+                  <div className="text-text-muted text-xs">Budget makan/hari</div>
+                  <div className="font-semibold tabular-nums">
+                    Rp {fmtNum(profile.budget_idr_per_day)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Auto-generate AI plan + workout */}
-      {autoGen === "idle" && (
-        <div className="space-y-3 pt-2">
-          <button
-            onClick={() =>
-              handleAutoGenerate(profile, {
-                setAutoGen,
-                setPlanDone,
-                setWorkoutDone,
-                setAutoGenErrors,
-                onGoHome,
-              })
-            }
-            className="w-full px-6 py-4 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white font-bold shadow-lg shadow-brand-600/30 hover:-translate-y-0.5 hover:shadow-xl transition-all flex items-center justify-center gap-2"
-          >
-            <Sparkles className="w-5 h-5" />
-            Generate plan + workout pertama (~60s)
-          </button>
-          <button
-            onClick={onGoHome}
-            className="w-full px-6 py-3 rounded-2xl bg-surface border-2 border-border font-semibold hover:border-brand-300 transition-all"
-          >
-            Lewati, ke dashboard
-          </button>
-          <button
-            onClick={onGoTdee}
-            className="w-full text-xs text-text-muted hover:text-fg font-medium underline-offset-2 hover:underline pt-1"
-          >
-            Lihat detail TDEE & macro
-          </button>
-        </div>
-      )}
 
       {autoGen === "running" && (
         <div className="p-5 rounded-2xl bg-brand-50/60 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-500/30">
