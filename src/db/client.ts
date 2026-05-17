@@ -109,25 +109,51 @@ export async function resolveDbPath(): Promise<string> {
     /* ignore */
   }
 
-  // Prefer the production alias (always public) over VERCEL_URL (deployment-
-  // specific, often gated by Vercel Deployment Protection → returns 401).
-  const baseUrl =
-    process.env.SEHATIN_DB_BASE_URL ||
-    (process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : process.env.NEXT_PUBLIC_BASE_URL ||
-        "https://sehatin-tan.vercel.app");
-  const dbUrl = `${baseUrl}/sehatin.db`;
-  const res = await fetch(dbUrl, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(
-      `Failed to fetch SQLite DB from ${dbUrl} — HTTP ${res.status}. Production URL must be publicly accessible (check Vercel Deployment Protection).`,
+  // Vercel Deployment Protection gates BOTH VERCEL_URL (deployment-specific)
+  // AND VERCEL_PROJECT_PRODUCTION_URL (sehatin-bashideffendi.vercel.app) with
+  // 401. Only the random-hash production alias (e.g. sehatin-tan.vercel.app)
+  // is public by default. Try several URLs in order — accept the first 200.
+  const candidateUrls: string[] = [];
+  if (process.env.SEHATIN_DB_BASE_URL) {
+    candidateUrls.push(`${process.env.SEHATIN_DB_BASE_URL}/sehatin.db`);
+  }
+  if (process.env.NEXT_PUBLIC_BASE_URL) {
+    candidateUrls.push(`${process.env.NEXT_PUBLIC_BASE_URL}/sehatin.db`);
+  }
+  candidateUrls.push("https://sehatin-tan.vercel.app/sehatin.db");
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    candidateUrls.push(
+      `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/sehatin.db`,
     );
   }
-  const buf = Buffer.from(await res.arrayBuffer());
-  writeFileSync(tmpPath, buf);
-  _resolvedPath = tmpPath;
-  return tmpPath;
+  if (process.env.VERCEL_URL) {
+    candidateUrls.push(`https://${process.env.VERCEL_URL}/sehatin.db`);
+  }
+
+  let lastError = "";
+  for (const url of candidateUrls) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        lastError = `${url} → HTTP ${res.status}`;
+        continue;
+      }
+      const buf = Buffer.from(await res.arrayBuffer());
+      // Sanity check — SQLite header starts with "SQLite format 3\0"
+      if (buf.length < 16 || buf.subarray(0, 6).toString() !== "SQLite") {
+        lastError = `${url} → got ${buf.length} bytes, not a SQLite file (probably HTML auth page)`;
+        continue;
+      }
+      writeFileSync(tmpPath, buf);
+      _resolvedPath = tmpPath;
+      return tmpPath;
+    } catch (e) {
+      lastError = `${url} → ${(e as Error).message}`;
+    }
+  }
+  throw new Error(
+    `Failed to fetch SQLite DB from any candidate URL. Last: ${lastError}. Disable Vercel Deployment Protection or set SEHATIN_DB_BASE_URL env to a public URL.`,
+  );
 }
 
 /** Convenience: resolve path + open DB in one async call. */
