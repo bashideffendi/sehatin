@@ -528,11 +528,11 @@ export default function PlanPage() {
           >
             {appliedDayIdx === activeDayIdx ? (
               <>
-                <CheckCircle2 className="w-4 h-4" /> Udah di-log ke catatan
+                <CheckCircle2 className="w-4 h-4" /> Udah masuk Catatan harian
               </>
             ) : (
               <>
-                <Plus className="w-4 h-4" /> Log seluruh hari ke catatan
+                <Plus className="w-4 h-4" /> Catat seluruh hari ke Catatan harian
               </>
             )}
           </button>
@@ -657,12 +657,12 @@ export default function PlanPage() {
       {/* Hint */}
       <div className="mt-6 p-4 rounded-2xl bg-brand-50/40 dark:bg-brand-500/10 border border-brand-200/50 dark:border-brand-500/20 text-xs text-brand-700/80 dark:text-brand-200 leading-relaxed">
         <Sparkles className="w-3 h-3 inline mr-1" />
-        Plan ini rekomendasi — bukan paksaan. Realisasi makan kamu di-track di{" "}
+        Plan ini cuma rekomendasi. Realisasi makan kamu dicatat di{" "}
         <Link href="/log" className="underline font-semibold">
-          /log
+          Catatan harian
         </Link>
-        . Klik <strong>Log</strong> kalo bener makan sesuai plan, atau add
-        manual di /log kalo makan beda.
+        . Klik <strong>Catat ke harian</strong> kalo bener makan sesuai plan,
+        atau catat manual di Catatan harian kalo makan beda.
       </div>
 
       {/* Regenerate modal */}
@@ -975,17 +975,17 @@ function MealCard({
             isEmpty
               ? "Tambah item dulu"
               : logged
-                ? "Udah di-log"
-                : "Log meal ini ke catatan harian"
+                ? "Udah masuk ke Catatan harian"
+                : "Pindahin meal ini ke Catatan harian"
           }
         >
           {logged ? (
             <>
-              <CheckCircle2 className="w-3.5 h-3.5" /> dilog
+              <CheckCircle2 className="w-3.5 h-3.5" /> dicatat
             </>
           ) : (
             <>
-              <Plus className="w-3.5 h-3.5" /> Log meal
+              <Plus className="w-3.5 h-3.5" /> Catat ke harian
             </>
           )}
         </button>

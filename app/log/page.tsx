@@ -945,9 +945,9 @@ function PlannedGhostRow({
       <button
         onClick={onLog}
         className="px-2.5 py-1 rounded-md bg-brand-600 text-white text-[10px] font-bold inline-flex items-center gap-1 hover:bg-brand-700 flex-shrink-0"
-        title="Log ini ke catatan"
+        title="Pindah ini dari plan ke Catatan harian"
       >
-        <Plus className="w-3 h-3" /> Log
+        <Plus className="w-3 h-3" /> Catat
       </button>
     </li>
   );

@@ -69,11 +69,15 @@ export async function searchFoods(
     if (opts.kategori && f.kategori !== opts.kategori) continue;
     const n = norm(f.name);
     if (!n.includes(q)) continue;
-    // simple scoring: prefer startsWith > contains, shorter name = better
+    // Scoring: prefer startsWith > contains, shorter name = better,
+    // and prefer Olahan (cooked) so 'nasi' surfaces 'Nasi' before
+    // 'Beras giling, mentah'.
     let score = 0;
     if (n.startsWith(q)) score += 100;
     else if (n.split(" ").some((w) => w.startsWith(q))) score += 50;
     score += Math.max(0, 50 - n.length); // shorter wins
+    if (f.tipe === "Olahan") score += 30;
+    if (n.includes("mentah")) score -= 25;
     hits.push({ entry: f, score });
   }
   hits.sort((a, b) => b.score - a.score);

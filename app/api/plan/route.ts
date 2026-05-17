@@ -198,7 +198,9 @@ export async function POST(req: Request) {
     const result = await generateMealPlan(db, mealReq, {
       dryRun: body.dry_run ?? false,
       poolPerCategory: body.pool_per_category ?? 15,
-      includeOlahan: body.include_olahan ?? false,
+      // Default true: AI picks cooked/ready foods (Nasi, Ayam goreng) instead
+      // of raw ingredients (Beras giling, daging mentah). Caller can override.
+      includeOlahan: body.include_olahan ?? true,
     });
 
     return NextResponse.json({
