@@ -815,6 +815,9 @@ function buildDemoWorkoutPlan(): StoredWorkoutPlan {
 export function loadDemoData(): void {
   if (typeof window === "undefined") return;
 
+  // ===== Clear first (fresh slate) =====
+  clearAllSehatinData();
+
   // ===== Profile =====
   saveProfile(DEMO_PROFILE);
 

@@ -404,14 +404,32 @@ function PlanTodayCard({
   const cost = planDay.est_cost_idr ?? null;
 
   // Compute upcoming meal — first un-logged meal whose hour > current hour
+  // Use position-based time for 5-meal day (handles duplicate snacks)
+  const MEAL_POSITION_TIMES = [
+    "07:00", "10:00", "12:30", "15:30", "19:00",
+  ];
   const nowHour = new Date().getHours();
-  const slotInfo = planDay.meals.map((m) => {
+  const nowMinute = new Date().getMinutes();
+  const nowTotalMin = nowHour * 60 + nowMinute;
+  const slotInfo = planDay.meals.map((m, idx) => {
     const slot = normalizeSlot(m.slot);
-    const hour = slot ? MEAL_SLOT_DEFAULT_HOUR[slot] : 12;
-    return { m, slot, hour, isLogged: slot ? loggedSlots.has(slot) : false };
+    const timeStr =
+      MEAL_POSITION_TIMES[idx] ??
+      `${String(slot ? MEAL_SLOT_DEFAULT_HOUR[slot] : 12).padStart(2, "0")}:00`;
+    const [hh, mm] = timeStr.split(":").map(Number);
+    const totalMin = hh * 60 + mm;
+    return {
+      m,
+      slot,
+      timeStr,
+      totalMin,
+      isLogged: slot ? loggedSlots.has(slot) : false,
+    };
   });
   // "Berikutnya" = the first non-logged meal still in the future (or the next one chronologically)
-  const upcomingIdx = slotInfo.findIndex((s) => !s.isLogged && s.hour >= nowHour);
+  const upcomingIdx = slotInfo.findIndex(
+    (s) => !s.isLogged && s.totalMin >= nowTotalMin,
+  );
   const fallbackIdx = slotInfo.findIndex((s) => !s.isLogged);
   const berikutnyaIdx = upcomingIdx >= 0 ? upcomingIdx : fallbackIdx;
 
@@ -441,9 +459,8 @@ function PlanTodayCard({
         </Btn>
       </div>
       <ul className="space-y-1">
-        {slotInfo.slice(0, 5).map(({ m, slot, hour, isLogged }, i) => {
+        {slotInfo.slice(0, 5).map(({ m, slot, timeStr, isLogged }, i) => {
           const isBerikutnya = i === berikutnyaIdx;
-          const timeStr = `${String(hour).padStart(2, "0")}:00`;
           const headItem = m.items[0];
           // Build a short sub: portion if single, else extra items list
           let sub = "";
@@ -540,10 +557,31 @@ function WorkoutNextCard({
     );
   }
   // Parse a friendly title from day_label like "Selasa (Upper Push)" → ["Selasa", "Upper Push"]
-  const dayLabel = nextSession.session.day_label;
-  const titleMatch = dayLabel.match(/^(.+?)\s*[\(·]\s*(.+?)[\)]?$/);
-  const dayName = titleMatch ? titleMatch[1].trim() : dayLabel;
-  const focusName = titleMatch ? titleMatch[2].trim() : nextSession.session.focus;
+  const focusLower = nextSession.session.focus.toLowerCase();
+  let dayTitle: string;
+  let focusItalic: string;
+  if (focusLower.includes("push")) {
+    dayTitle = "Push Day";
+    focusItalic = "dada & bahu";
+  } else if (focusLower.includes("pull")) {
+    dayTitle = "Pull Day";
+    focusItalic = "punggung & biceps";
+  } else if (focusLower.includes("quad") || focusLower.includes("leg")) {
+    dayTitle = "Leg Day";
+    focusItalic = "kaki depan";
+  } else if (focusLower.includes("posterior")) {
+    dayTitle = "Lower Day";
+    focusItalic = "kaki belakang";
+  } else if (focusLower.includes("core")) {
+    dayTitle = "Core Day";
+    focusItalic = "perut & inti";
+  } else if (focusLower.includes("cardio")) {
+    dayTitle = "Cardio Day";
+    focusItalic = "denyut & napas";
+  } else {
+    dayTitle = "Workout";
+    focusItalic = focusLower;
+  }
 
   // Equipment summary — short form
   const eqShort = "Home · DB";
@@ -562,13 +600,12 @@ function WorkoutNextCard({
         </Pill>
       </div>
       <h3 className="text-[22px] font-extrabold tracking-tight leading-[1.1]">
-        {dayName.replace(/Senin/i, "Push Day").replace(/Selasa/i, "Leg Day").replace(/Rabu/i, "Rest").replace(/Kamis/i, "Pull Day").replace(/Jumat/i, "Rest").replace(/Sabtu/i, "Lower Day").replace(/Minggu/i, "Rest")}{" "}
-        ·{" "}
+        {dayTitle} ·{" "}
         <span
           className="font-normal italic text-clay"
           style={{ fontFamily: "var(--font-serif)" }}
         >
-          {focusName.toLowerCase().replace("push", "dada & bahu").replace("pull", "punggung & biceps").replace("quads", "kaki depan").replace("posterior", "kaki belakang")}
+          {focusItalic}
         </span>
       </h3>
       <div className="mt-1.5 text-[11.5px] text-muted tabular">
