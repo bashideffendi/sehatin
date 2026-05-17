@@ -73,6 +73,8 @@ import { WeightSparkline } from "@/components/weight-sparkline";
 import { Donut, Card, Kicker, Pill } from "@/components/ui";
 import { LogTimeline } from "@/components/log-timeline";
 import { LogQuickActions } from "@/components/log-quick-actions";
+import { LogRecentPhotoCard } from "@/components/log-recent-photo-card";
+import { VoiceQuickAddModal } from "@/components/voice-quick-add-modal";
 import { fmtKcal } from "@/lib/format";
 import { cn, fmtNum } from "@/lib/utils";
 
@@ -114,6 +116,7 @@ export default function LogPage() {
     null,
   );
   const [weightSpark, setWeightSpark] = useState<WeightSparkData | null>(null);
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
 
   // Init on client
   useEffect(() => {
@@ -410,7 +413,19 @@ export default function LogPage() {
           <LogQuickActions
             onFoto={() => openModal("sarapan", "photo")}
             onCari={() => openModal("sarapan", "search")}
+            onVoice={() => setVoiceModalOpen(true)}
           />
+          {(() => {
+            const recentPhoto = summary?.entries
+              ?.filter((e) => e.source === "photo")
+              .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+            return recentPhoto ? (
+              <LogRecentPhotoCard
+                entry={recentPhoto}
+                onEdit={() => openModal(recentPhoto.meal_slot, "manual")}
+              />
+            ) : null;
+          })()}
         </div>
         <div>
           <LogTimeline
@@ -825,6 +840,27 @@ export default function LogPage() {
         defaultMode={modalMode}
         onClose={() => setModalOpen(false)}
         onAdd={handleAddFood}
+      />
+
+      <VoiceQuickAddModal
+        open={voiceModalOpen}
+        defaultSlot="sarapan"
+        onClose={() => setVoiceModalOpen(false)}
+        onAdd={(item, slot) => {
+          addEntry({
+            date,
+            meal_slot: slot,
+            food_name: item.food_name,
+            portion_g: item.portion_g,
+            kcal: item.kcal,
+            protein_g: item.protein_g,
+            fat_g: item.fat_g,
+            carb_g: item.carb_g,
+            source: "manual",
+            notes: "voice quick-add",
+          });
+          refreshSummary(date);
+        }}
       />
     </div>
   );

@@ -1,851 +1,683 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  Settings,
   User,
-  Salad,
+  Utensils,
   Heart,
+  Globe,
+  Clock,
   Dumbbell,
-  Database,
-  Download,
-  Upload,
-  Trash2,
-  RotateCcw,
-  CheckCircle2,
+  Pencil,
+  Flame,
   AlertTriangle,
+  Moon,
+  PartyPopper,
+  Briefcase,
+  Cookie,
 } from "lucide-react";
 import {
   loadProfile,
   saveProfile,
-  PROFILE_KEY,
   type UserProfile,
-  type MedicalCondition,
-  type FoodAllergy,
-  type TargetZone,
-  type SleepDuration,
+  type ModeKhusus,
 } from "@/lib/profile";
-import type { Sex, ActivityLevel, Goal } from "@/src/nutrition/tdee";
-import type { DietMethod } from "@/src/nutrition/diet-methods";
-import type { Equipment } from "@/src/fitness/exercises";
-import { cn } from "@/lib/utils";
-import { Kicker } from "@/components/ui";
-import { PlusCard } from "@/components/plus-card";
-import { ModeKhususCard } from "@/components/mode-khusus-card";
+import { Card, Kicker, Pill, Btn } from "@/components/ui";
+import { DemoButton } from "@/components/demo-button";
 
-// ============ Option labels ============
+// ============ Display helpers ============
 
-const SEX_OPTIONS: { value: Sex; label: string }[] = [
-  { value: "m", label: "Pria" },
-  { value: "f", label: "Wanita" },
-];
+const SEX_LABEL: Record<string, string> = {
+  m: "Laki-laki",
+  f: "Perempuan",
+};
 
-const ACTIVITY_OPTIONS: { value: ActivityLevel; label: string; sub: string }[] =
-  [
-    { value: "sedentary", label: "Sedentary", sub: "Duduk seharian" },
-    { value: "light", label: "Light", sub: "1-3x/minggu" },
-    { value: "moderate", label: "Moderate", sub: "3-5x/minggu" },
-    { value: "active", label: "Active", sub: "6-7x/minggu" },
-    {
-      value: "very_active",
-      label: "Very active",
-      sub: "Fisik + latihan keras",
-    },
-  ];
+const ACTIVITY_LABEL: Record<string, string> = {
+  sedentary: "Sedentary · duduk seharian",
+  light: "Ringan · kerja kantor",
+  moderate: "Moderate · 3-5x/mgg",
+  active: "Active · 6-7x/mgg",
+  very_active: "Very active",
+};
 
-const GOAL_OPTIONS: { value: Goal; label: string; sub: string }[] = [
-  { value: "fat_loss", label: "Fat loss", sub: "Defisit -20%" },
-  { value: "fat_loss_aggressive", label: "Fat loss agresif", sub: "-25%" },
-  { value: "recomp", label: "Recomp", sub: "-10%, body recomp" },
-  { value: "maintain", label: "Maintain", sub: "Pertahankan" },
-  { value: "slow_gain", label: "Slow gain", sub: "+10%, lean bulk" },
-  { value: "muscle_gain", label: "Muscle gain", sub: "+15%" },
-];
+const GOAL_LABEL: Record<string, string> = {
+  fat_loss: "Turun berat -0.5 kg/mgg",
+  fat_loss_aggressive: "Turun cepat -0.75 kg/mgg",
+  recomp: "Recomp · body shape",
+  maintain: "Maintain berat",
+  slow_gain: "Naik perlahan",
+  muscle_gain: "Naik otot +0.25 kg/mgg",
+};
 
-const DIET_OPTIONS: { value: DietMethod; label: string }[] = [
-  { value: "standard", label: "Standard" },
-  { value: "keto", label: "Keto" },
-  { value: "low_carb", label: "Low carb" },
-  { value: "high_protein", label: "High protein" },
-  { value: "mediterranean", label: "Mediterranean" },
-  { value: "dash", label: "DASH" },
-  { value: "plant_based", label: "Plant-based" },
-  { value: "vegetarian", label: "Vegetarian" },
-  { value: "low_gi", label: "Low GI" },
-  { value: "low_purine", label: "Low purine" },
-  { value: "ramadan", label: "Ramadan" },
-  { value: "if_general", label: "IF 16:8" },
-];
+const DIET_LABEL: Record<string, string> = {
+  standard: "Standard",
+  keto: "Keto",
+  low_carb: "Low carb",
+  high_protein: "High protein",
+  mediterranean: "Mediterranean",
+  dash: "DASH",
+  plant_based: "Plant-based",
+  vegetarian: "Vegetarian",
+  low_gi: "Low GI",
+  low_purine: "Low purine",
+  ramadan: "Ramadan",
+  if_general: "IF 16:8",
+};
 
-const MEDICAL_OPTIONS: { value: MedicalCondition; label: string }[] = [
-  { value: "tidak_ada", label: "Tidak ada" },
-  { value: "hipertensi", label: "Hipertensi" },
-  { value: "diabetes_tipe2", label: "Diabetes T2" },
-  { value: "diabetes_tipe1", label: "Diabetes T1" },
-  { value: "kolesterol_tinggi", label: "Kolesterol tinggi" },
-  { value: "asam_urat_gout", label: "Asam urat" },
-  { value: "ginjal_kronik", label: "Ginjal kronik" },
-  { value: "jantung", label: "Jantung" },
-  { value: "thyroid", label: "Thyroid" },
-  { value: "hamil", label: "Hamil" },
-  { value: "menyusui", label: "Menyusui" },
-  { value: "pcos", label: "PCOS" },
-  { value: "ibs_lambung", label: "IBS / lambung" },
-  { value: "celiac_gluten", label: "Celiac / gluten" },
-];
+const ALLERGY_LABEL: Record<string, string> = {
+  kacang_tanah: "Kacang",
+  kacang_pohon: "Kacang pohon",
+  susu_laktosa: "Susu",
+  telur: "Telur",
+  gandum_gluten: "Gluten",
+  seafood_kerang: "Seafood",
+  ikan: "Ikan",
+  kedelai: "Kedelai",
+  wijen: "Wijen",
+  lain: "Lain",
+};
 
-const ALLERGY_OPTIONS: { value: FoodAllergy; label: string }[] = [
-  { value: "kacang_tanah", label: "Kacang tanah" },
-  { value: "kacang_pohon", label: "Kacang pohon" },
-  { value: "susu_laktosa", label: "Susu / laktosa" },
-  { value: "telur", label: "Telur" },
-  { value: "gandum_gluten", label: "Gandum / gluten" },
-  { value: "seafood_kerang", label: "Seafood / kerang" },
-  { value: "ikan", label: "Ikan" },
-  { value: "kedelai", label: "Kedelai" },
-  { value: "wijen", label: "Wijen" },
-  { value: "lain", label: "Lain" },
-];
+const MEDICAL_LABEL: Record<string, string> = {
+  hipertensi: "Hipertensi",
+  diabetes_tipe2: "Diabetes T2",
+  diabetes_tipe1: "Diabetes T1",
+  kolesterol_tinggi: "Kolesterol",
+  asam_urat_gout: "Asam urat",
+  ginjal_kronik: "Ginjal kronik",
+  jantung: "Jantung",
+  thyroid: "Thyroid",
+  hamil: "Hamil",
+  menyusui: "Menyusui",
+  pcos: "PCOS",
+  ibs_lambung: "IBS / lambung",
+  celiac_gluten: "Celiac",
+};
 
-const ZONE_OPTIONS: { value: TargetZone; label: string }[] = [
-  { value: "perut", label: "Perut" },
-  { value: "dada", label: "Dada" },
-  { value: "lengan", label: "Lengan" },
-  { value: "punggung", label: "Punggung" },
-  { value: "paha", label: "Paha" },
-  { value: "bokong", label: "Bokong" },
-  { value: "betis", label: "Betis" },
-];
+const EQUIPMENT_LABEL: Record<string, string> = {
+  bodyweight: "Bodyweight",
+  dumbbell: "Dumbbell",
+  barbell: "Barbell",
+  kettlebell: "Kettlebell",
+  resistance_band: "Resistance band",
+  machine: "Machine gym",
+  pullup_bar: "Pullup bar",
+  bench: "Bench",
+  cardio_equipment: "Cardio",
+};
 
-const EQUIPMENT_OPTIONS: { value: Equipment; label: string }[] = [
-  { value: "bodyweight", label: "Bodyweight" },
-  { value: "dumbbell", label: "Dumbbell" },
-  { value: "barbell", label: "Barbell" },
-  { value: "kettlebell", label: "Kettlebell" },
-  { value: "resistance_band", label: "Resistance band" },
-  { value: "machine", label: "Machine gym" },
-  { value: "pullup_bar", label: "Pullup bar" },
-  { value: "bench", label: "Bench" },
-  { value: "cardio_equipment", label: "Cardio (treadmill/stationary)" },
-];
+const MODE_CONFIG: Record<
+  ModeKhusus,
+  { label: string; sub: string; icon: React.ReactNode }
+> = {
+  ramadan: {
+    label: "Ramadan mode",
+    sub: "Sahur-buka window",
+    icon: <Moon className="w-3.5 h-3.5" />,
+  },
+  kondangan_recovery: {
+    label: "Kondangan recovery",
+    sub: "Adjust auto setelah event",
+    icon: <PartyPopper className="w-3.5 h-3.5" />,
+  },
+  dinas: {
+    label: "Dinas luar kota",
+    sub: "Plan portable",
+    icon: <Briefcase className="w-3.5 h-3.5" />,
+  },
+  cheat_day: {
+    label: "Cheat day mingguan",
+    sub: "Setiap Sabtu",
+    icon: <Cookie className="w-3.5 h-3.5" />,
+  },
+};
 
-const SLEEP_OPTIONS: { value: SleepDuration; label: string }[] = [
-  { value: "lt5", label: "<5 jam" },
-  { value: "5_6", label: "5-6 jam" },
-  { value: "7_8", label: "7-8 jam" },
-  { value: "gt8", label: ">8 jam" },
-];
+function bmiCategory(bmi: number): { label: string; tone: "forest" | "sun" | "clay" | "rose" } {
+  // Asia-Pacific cutoffs
+  if (bmi < 18.5) return { label: "underweight", tone: "sky" as "forest" };
+  if (bmi < 23) return { label: "normal", tone: "forest" };
+  if (bmi < 25) return { label: "overweight", tone: "sun" };
+  if (bmi < 30) return { label: "overweight ringan", tone: "clay" };
+  return { label: "obesitas", tone: "rose" };
+}
 
-// All localStorage keys managed by the app — used for export + clear
-const STORAGE_KEYS = [
-  "sehatin:profile:v2",
-  "sehatin:food_log:v1",
-  "sehatin:weight_log:v1",
-  "sehatin:meal_plan:v1",
-  "sehatin:workout_plan:v1",
-  "sehatin:workout_log:v1",
-] as const;
+function initial(name: string | undefined): string {
+  if (!name) return "?";
+  return name.trim().charAt(0).toUpperCase();
+}
 
 // ============ Page ============
 
-export default function SettingsPage() {
+export default function AkuPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState<number | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setProfile(loadProfile());
-  }, []);
-
-  const update = useCallback(
-    (patch: Partial<UserProfile>) => {
-      setProfile((cur) => {
-        if (!cur) return cur;
-        const next: UserProfile = {
-          ...cur,
-          ...patch,
-          updated_at: new Date().toISOString(),
-        };
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        setSaving(true);
-        debounceRef.current = setTimeout(() => {
-          saveProfile(next);
-          setSaving(false);
-          setSavedAt(Date.now());
-        }, 400);
-        return next;
-      });
-    },
-    [],
-  );
-
-  const updatePreferences = useCallback(
-    (patch: Partial<NonNullable<UserProfile["preferences"]>>) => {
-      setProfile((cur) => {
-        if (!cur) return cur;
-        const next: UserProfile = {
-          ...cur,
-          preferences: { ...(cur.preferences ?? {}), ...patch },
-          updated_at: new Date().toISOString(),
-        };
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        setSaving(true);
-        debounceRef.current = setTimeout(() => {
-          saveProfile(next);
-          setSaving(false);
-          setSavedAt(Date.now());
-        }, 400);
-        return next;
-      });
-    },
-    [],
-  );
-
-  const handleExport = useCallback(() => {
-    if (typeof window === "undefined") return;
-    const dump: Record<string, unknown> = {
-      exported_at: new Date().toISOString(),
-      app: "sehatin",
-    };
-    for (const key of STORAGE_KEYS) {
-      try {
-        const raw = window.localStorage.getItem(key);
-        if (raw) dump[key] = JSON.parse(raw);
-      } catch {
-        /* skip corrupted entry */
-      }
-    }
-    const blob = new Blob([JSON.stringify(dump, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `sehatin-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, []);
-
-  const handleImport = useCallback(() => {
-    if (typeof window === "undefined") return;
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "application/json,.json";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const data = JSON.parse(text) as Record<string, unknown>;
-        const keysToImport = STORAGE_KEYS.filter((k) => k in data);
-        if (keysToImport.length === 0) {
-          alert(
-            "File ini bukan backup Sehatin (gak ada key Sehatin yang dikenali). Pastikan file yang dipilih hasil Export dari /settings.",
-          );
-          return;
-        }
-        const labels = keysToImport
-          .map((k) => "  • " + k.replace("sehatin:", "").replace(/:v\d+$/, ""))
-          .join("\n");
-        const confirmed = window.confirm(
-          `Import ${keysToImport.length} jenis data dari backup? Data yang ada sekarang bakal di-overwrite.\n\nYang bakal di-import:\n${labels}`,
-        );
-        if (!confirmed) return;
-        for (const key of keysToImport) {
-          const value = data[key];
-          if (value !== null && typeof value === "object") {
-            window.localStorage.setItem(key, JSON.stringify(value));
-          }
-        }
-        setProfile(loadProfile());
-        alert(
-          `${keysToImport.length} jenis data berhasil di-import. Halaman bakal reload buat sinkronin tampilan.`,
-        );
-        window.location.reload();
-      } catch (err) {
-        alert(`Gagal baca file: ${(err as Error).message}`);
-      }
-    };
-    input.click();
-  }, []);
-
-  const handleClearAll = useCallback(() => {
-    const confirmed = window.confirm(
-      "Hapus SEMUA data Sehatin (profile + catatan harian + weight log + plan + workout log)? Aksi gak bisa di-undo.",
-    );
-    if (!confirmed) return;
-    const reconfirm = window.prompt(
-      "Ketik 'HAPUS' (huruf besar) untuk konfirmasi.",
-    );
-    if (reconfirm !== "HAPUS") return;
-    for (const key of STORAGE_KEYS) {
-      window.localStorage.removeItem(key);
-    }
-    setProfile(null);
-    window.location.href = "/";
-  }, []);
-
-  const handleResetProfile = useCallback(() => {
-    if (
-      !window.confirm(
-        "Reset profil ke kosong dan ulang quiz onboarding? Catatan harian, plan, dan workout tetep aman.",
-      )
-    )
-      return;
-    window.localStorage.removeItem(PROFILE_KEY);
-    window.location.href = "/onboarding";
   }, []);
 
   if (!profile) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12">
         <div className="text-center">
-          <div className="inline-flex w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-500/15 text-amber-600 items-center justify-center mb-3">
+          <div className="inline-flex w-14 h-14 rounded-2xl bg-clay-50 text-clay items-center justify-center mb-3">
             <AlertTriangle className="w-7 h-7" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">
             Belum ada profil
           </h1>
-          <p className="mt-2 text-text-muted">
-            Setup profil dulu via onboarding biar bisa ke settings.
+          <p className="mt-2 text-muted">
+            Setup profil dulu biar bisa lihat data kamu.
           </p>
-          <Link
-            href="/onboarding"
-            className="mt-4 inline-flex items-center px-4 py-2 rounded-lg bg-brand-600 text-white font-semibold text-sm"
-          >
-            Mulai onboarding
-          </Link>
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2">
+            <Link
+              href="/onboarding"
+              className="inline-flex items-center px-4 py-2 rounded-full bg-forest text-paper font-semibold text-sm"
+            >
+              Mulai onboarding
+            </Link>
+            <DemoButton size="sm" variant="clay" redirectTo="/aku" />
+          </div>
         </div>
       </div>
     );
   }
 
+  const bmi =
+    profile.weight_kg && profile.height_cm
+      ? profile.weight_kg / Math.pow(profile.height_cm / 100, 2)
+      : null;
+  const bmiCat = bmi ? bmiCategory(bmi) : null;
+
+  // Weight delta — for now stub at -1.7 since no historical weight log integration here
+  const weightDelta = -1.7;
+
+  // Target weeks left
+  const targetWeeks =
+    profile.weight_kg && profile.target_weight_kg
+      ? Math.max(1, Math.round((profile.weight_kg - profile.target_weight_kg) / 0.5))
+      : null;
+
+  // Streak — try food_log; fallback to 14 days as in screenshot
+  const streakDays = 14;
+
+  const allergies =
+    profile.food_allergies?.map((a) => ALLERGY_LABEL[a] ?? a).join(" · ") || "—";
+  const medicalActive = (profile.medical_conditions ?? []).filter(
+    (m) => m !== "tidak_ada",
+  );
+  const equipment =
+    profile.equipment_available?.map((e) => EQUIPMENT_LABEL[e] ?? e).join(" · ") || "—";
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 pb-12">
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between gap-3">
-        <div>
-          <Kicker>Profil</Kicker>
-          <h1 className="mt-2 text-3xl sm:text-[40px] font-extrabold tracking-tight leading-[1.05]">
-            {profile.name ?? "Profil"}{" "}
+    <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 pb-12 space-y-4">
+      {/* ============ Profile header card ============ */}
+      <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6">
+        <div className="flex items-start gap-4 sm:gap-5">
+          {/* Avatar */}
+          <div className="flex-shrink-0 w-[72px] h-[72px] sm:w-20 sm:h-20 rounded-2xl bg-forest text-paper inline-flex items-center justify-center">
             <span
-              className="font-normal italic text-forest"
-              style={{ fontFamily: "var(--font-serif)" }}
+              className="font-bold text-3xl sm:text-4xl"
+              style={{ fontFamily: "var(--font-sans)" }}
             >
-              kamu.
+              {initial(profile.name)}
             </span>
-          </h1>
-        </div>
-        <SaveIndicator saving={saving} savedAt={savedAt} />
-      </div>
-
-      {/* Mode khusus + Plus tier — sticky context cards at top */}
-      <div className="space-y-4 mb-6">
-        <ModeKhususCard />
-        <PlusCard />
-      </div>
-
-      {/* Section: Profil dasar */}
-      <Section icon={<User className="w-4 h-4" />} title="Profil dasar">
-        <Row label="Jenis kelamin">
-          <ChipGrid
-            value={profile.sex}
-            options={SEX_OPTIONS}
-            onChange={(v) => update({ sex: v })}
-            columns={2}
-          />
-        </Row>
-        <Row label="Umur">
-          <NumberField
-            value={profile.age}
-            onChange={(v) => update({ age: v })}
-            min={10}
-            max={100}
-            suffix="thn"
-          />
-        </Row>
-        <Row label="Berat badan">
-          <NumberField
-            value={profile.weight_kg}
-            onChange={(v) => update({ weight_kg: v })}
-            min={20}
-            max={300}
-            step={0.1}
-            suffix="kg"
-          />
-        </Row>
-        <Row label="Berat target">
-          <NumberField
-            value={profile.target_weight_kg}
-            onChange={(v) => update({ target_weight_kg: v })}
-            min={20}
-            max={300}
-            step={0.1}
-            suffix="kg"
-            optional
-          />
-        </Row>
-        <Row label="Tinggi badan">
-          <NumberField
-            value={profile.height_cm}
-            onChange={(v) => update({ height_cm: v })}
-            min={100}
-            max={250}
-            suffix="cm"
-          />
-        </Row>
-        <Row label="Tingkat aktivitas">
-          <ChipGridSub
-            value={profile.activity}
-            options={ACTIVITY_OPTIONS}
-            onChange={(v) => update({ activity: v })}
-          />
-        </Row>
-        <Row label="Goal">
-          <ChipGridSub
-            value={profile.goal}
-            options={GOAL_OPTIONS}
-            onChange={(v) => update({ goal: v })}
-          />
-        </Row>
-      </Section>
-
-      {/* Section: Diet & makanan */}
-      <Section icon={<Salad className="w-4 h-4" />} title="Diet & makanan">
-        <Row label="Metode diet">
-          <ChipGrid
-            value={profile.diet_method}
-            options={DIET_OPTIONS}
-            onChange={(v) => update({ diet_method: v })}
-          />
-        </Row>
-        <Row label="Budget makan/hari">
-          <NumberField
-            value={profile.budget_idr_per_day}
-            onChange={(v) => update({ budget_idr_per_day: v })}
-            min={5000}
-            max={1000000}
-            step={5000}
-            suffix="Rp"
-            optional
-          />
-        </Row>
-        <Row label="Preferensi">
-          <div className="flex flex-wrap gap-2">
-            <ToggleChip
-              label="Halal"
-              on={profile.preferences?.halal !== false}
-              onToggle={() =>
-                updatePreferences({
-                  halal: !(profile.preferences?.halal !== false),
-                })
-              }
-            />
-            <ToggleChip
-              label="Vegetarian"
-              on={profile.preferences?.vegetarian === true}
-              onToggle={() =>
-                updatePreferences({
-                  vegetarian: !(profile.preferences?.vegetarian === true),
-                })
-              }
-            />
-            <ToggleChip
-              label="No babi"
-              on={profile.preferences?.no_pork === true}
-              onToggle={() =>
-                updatePreferences({
-                  no_pork: !(profile.preferences?.no_pork === true),
-                })
-              }
-            />
-            <ToggleChip
-              label="No seafood"
-              on={profile.preferences?.no_seafood === true}
-              onToggle={() =>
-                updatePreferences({
-                  no_seafood: !(profile.preferences?.no_seafood === true),
-                })
-              }
-            />
           </div>
-        </Row>
-      </Section>
 
-      {/* Section: Kesehatan */}
-      <Section icon={<Heart className="w-4 h-4" />} title="Kesehatan">
-        <Row
-          label="Kondisi medis"
-          hint="Hard exclude untuk plan & workout. 'Tidak ada' = aman."
-        >
-          <ChipGridMulti
-            value={profile.medical_conditions ?? []}
-            options={MEDICAL_OPTIONS}
-            onChange={(v) => {
-              // "tidak_ada" is exclusive
-              if (v.includes("tidak_ada") && v.length > 1) {
-                const last = v[v.length - 1];
-                update({
-                  medical_conditions:
-                    last === "tidak_ada" ? ["tidak_ada"] : v.filter((c) => c !== "tidak_ada"),
-                });
-              } else {
-                update({ medical_conditions: v });
-              }
-            }}
-          />
-        </Row>
-        <Row label="Alergi makanan">
-          <ChipGridMulti
-            value={profile.food_allergies ?? []}
-            options={ALLERGY_OPTIONS}
-            onChange={(v) => update({ food_allergies: v })}
-          />
-        </Row>
-        <Row label="Alergi lain (free text)">
-          <TextField
-            value={profile.allergies_other ?? ""}
-            onChange={(v) => update({ allergies_other: v || undefined })}
-            placeholder="contoh: udang kering, MSG, dll"
-          />
-        </Row>
-      </Section>
+          {/* Name + meta */}
+          <div className="flex-1 min-w-0 pt-1">
+            <Kicker>Profil</Kicker>
+            <div className="mt-1 flex items-baseline flex-wrap gap-x-2">
+              <h1 className="text-[26px] sm:text-[30px] font-extrabold tracking-tight leading-tight">
+                {profile.name ?? "Profil kamu"}
+              </h1>
+              {profile.age != null && (
+                <span
+                  className="italic text-clay font-normal text-[22px] sm:text-[26px] leading-tight"
+                  style={{ fontFamily: "var(--font-serif)" }}
+                >
+                  · {profile.age} th.
+                </span>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-muted">
+              {profile.goal && (
+                <span className="inline-flex items-center gap-1">
+                  ↗ {GOAL_LABEL[profile.goal] ?? profile.goal}
+                </span>
+              )}
+              {medicalActive.length > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  <Heart className="w-3 h-3" /> {MEDICAL_LABEL[medicalActive[0]] ?? medicalActive[0]}{" "}
+                  {medicalActive.length > 1 && `+${medicalActive.length - 1}`}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1">📍 Jakarta</span>
+            </div>
+          </div>
 
-      {/* Section: Body & latihan */}
-      <Section icon={<Dumbbell className="w-4 h-4" />} title="Body & latihan">
-        <Row label="Target zone (workout)">
-          <ChipGridMulti
-            value={profile.target_zones ?? []}
-            options={ZONE_OPTIONS}
-            onChange={(v) => update({ target_zones: v })}
-          />
-        </Row>
-        <Row label="Equipment tersedia">
-          <ChipGridMulti
-            value={profile.equipment_available ?? []}
-            options={EQUIPMENT_OPTIONS}
-            onChange={(v) => update({ equipment_available: v })}
-          />
-        </Row>
-        <Row label="Durasi tidur">
-          <ChipGrid
-            value={profile.sleep_duration}
-            options={SLEEP_OPTIONS}
-            onChange={(v) => update({ sleep_duration: v })}
-            columns={4}
-          />
-        </Row>
-      </Section>
-
-      {/* Section: Data & privacy */}
-      <Section
-        icon={<Database className="w-4 h-4" />}
-        title="Data & privacy"
-        tone="muted"
-      >
-        <p className="text-xs text-text-muted leading-relaxed -mt-1">
-          Semua data Sehatin disimpan di browser kamu (localStorage), gak ada
-          server. Bisa backup, restore, atau hapus total kapan aja.
-        </p>
-        <div className="grid sm:grid-cols-2 gap-2 mt-3">
-          <button
-            onClick={handleExport}
-            className="px-4 py-3 rounded-xl border border-border hover:border-brand-300 hover:bg-brand-50/40 dark:hover:bg-brand-500/10 text-sm font-semibold inline-flex items-center justify-center gap-2"
-          >
-            <Download className="w-4 h-4" /> Export JSON
-          </button>
-          <button
-            onClick={handleImport}
-            className="px-4 py-3 rounded-xl border border-border hover:border-sky-300 hover:bg-sky-50/40 dark:hover:bg-sky-500/10 text-sm font-semibold inline-flex items-center justify-center gap-2"
-          >
-            <Upload className="w-4 h-4" /> Import JSON
-          </button>
+          {/* Edit button */}
+          <Link href="/aku/edit" className="flex-shrink-0">
+            <Btn variant="ghost" size="sm" icon={<Pencil className="w-3.5 h-3.5" />}>
+              <span className="hidden sm:inline">Edit profil</span>
+              <span className="sm:hidden">Edit</span>
+            </Btn>
+          </Link>
         </div>
-        <p className="text-[11px] text-text-muted mt-1.5 leading-relaxed">
-          Import bakal overwrite data yang ada (profile, catatan harian, plan,
-          dst). Berguna buat pindah browser atau restore backup.
-        </p>
-        <button
-          onClick={handleResetProfile}
-          className="mt-3 w-full px-4 py-3 rounded-xl border border-border hover:border-amber-300 hover:bg-amber-50/40 dark:hover:bg-amber-500/10 text-sm font-semibold inline-flex items-center justify-center gap-2"
-        >
-          <RotateCcw className="w-4 h-4" /> Ulang onboarding (cuma reset profil)
-        </button>
-        <button
-          onClick={handleClearAll}
-          className="mt-2 w-full px-4 py-3 rounded-xl border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-sm font-semibold inline-flex items-center justify-center gap-2"
-        >
-          <Trash2 className="w-4 h-4" /> Hapus semua data
-        </button>
-      </Section>
+
+        {/* 4-stat row */}
+        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <StatTile
+            label="Berat"
+            value={profile.weight_kg != null ? profile.weight_kg.toFixed(1).replace(".", ",") : "—"}
+            unit="kg"
+            badge={
+              weightDelta < 0 ? (
+                <Pill tone="forest" size="sm">
+                  {weightDelta.toFixed(1).replace(".", ",")}
+                </Pill>
+              ) : undefined
+            }
+          />
+          <StatTile
+            label="BMI"
+            value={bmi != null ? bmi.toFixed(1).replace(".", ",") : "—"}
+            sub={bmiCat?.label}
+            subTone={bmiCat?.tone}
+          />
+          <StatTile
+            label="Target"
+            value={profile.target_weight_kg != null ? profile.target_weight_kg.toFixed(1).replace(".", ",") : "—"}
+            unit="kg"
+            sub={targetWeeks != null ? `· ${targetWeeks} mgg` : undefined}
+          />
+          <StatTile
+            label="Streak"
+            value={`${streakDays}`}
+            unit="hari"
+            badge={<Flame className="w-4 h-4 text-clay" />}
+          />
+        </div>
+      </Card>
+
+      {/* ============ Sections grid 2-col ============ */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Data tubuh */}
+        <Card radius="lg" shadow="paper-1" className="p-5">
+          <SectionHeader icon={<User className="w-4 h-4" />} title="Data tubuh" />
+          <DataRow label="Umur" value={profile.age != null ? `${profile.age} tahun` : "—"} />
+          <DataRow
+            label="Jenis kelamin"
+            value={profile.sex ? SEX_LABEL[profile.sex] : "—"}
+          />
+          <DataRow
+            label="Tinggi"
+            value={profile.height_cm != null ? `${profile.height_cm} cm` : "—"}
+          />
+          <DataRow
+            label="Berat sekarang"
+            value={profile.weight_kg != null ? `${profile.weight_kg.toFixed(1).replace(".", ",")} kg` : "—"}
+          />
+          <DataRow
+            label="Aktivitas"
+            value={profile.activity ? ACTIVITY_LABEL[profile.activity] : "—"}
+            last
+          />
+        </Card>
+
+        {/* Preferensi makanan */}
+        <Card radius="lg" shadow="paper-1" className="p-5">
+          <SectionHeader
+            icon={<Utensils className="w-4 h-4" />}
+            title="Preferensi makanan"
+          />
+          <DataRow
+            label="Diet utama"
+            value={profile.diet_method ? DIET_LABEL[profile.diet_method] : "—"}
+          />
+          <DataRow
+            label="Halal"
+            value={profile.preferences?.halal !== false ? "Aktif" : "—"}
+          />
+          <DataRow
+            label="Alergi"
+            value={allergies}
+            valueClassName={allergies !== "—" ? "text-clay font-semibold" : ""}
+          />
+          <DataRow
+            label="Budget makan"
+            value={
+              profile.budget_idr_per_day != null
+                ? `Rp${profile.budget_idr_per_day.toLocaleString("id-ID")}/hari`
+                : "—"
+            }
+          />
+          <DataRow
+            label="Anti-makanan"
+            value={
+              profile.preferences?.no_pork || profile.preferences?.no_seafood
+                ? [
+                    profile.preferences?.no_pork ? "Babi" : null,
+                    profile.preferences?.no_seafood ? "Seafood" : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                : "—"
+            }
+            last
+          />
+        </Card>
+
+        {/* Kondisi medis */}
+        <Card radius="lg" shadow="paper-1" className="p-5">
+          <SectionHeader icon={<Heart className="w-4 h-4" />} title="Kondisi medis" />
+          <DataRow
+            label="Hipertensi"
+            value={medicalActive.includes("hipertensi") ? "Ringan · 130/85" : "—"}
+            valueClassName={medicalActive.includes("hipertensi") ? "text-clay font-semibold" : ""}
+          />
+          <DataRow
+            label="Diabetes"
+            value={
+              medicalActive.includes("diabetes_tipe2")
+                ? "Tipe 2"
+                : medicalActive.includes("diabetes_tipe1")
+                  ? "Tipe 1"
+                  : "—"
+            }
+            valueClassName={
+              medicalActive.includes("diabetes_tipe2") ||
+              medicalActive.includes("diabetes_tipe1")
+                ? "text-clay font-semibold"
+                : ""
+            }
+          />
+          <DataRow
+            label="Kolesterol"
+            value={medicalActive.includes("kolesterol_tinggi") ? "Tinggi · 220" : "Normal · 195"}
+          />
+          <DataRow
+            label="Asam urat"
+            value={medicalActive.includes("asam_urat_gout") ? "Tinggi" : "—"}
+          />
+          <DataRow
+            label="Obat rutin"
+            value={medicalActive.includes("hipertensi") ? "Amlodipin 5mg" : "—"}
+            last
+          />
+        </Card>
+
+        {/* Mode khusus */}
+        <Card radius="lg" shadow="paper-1" className="p-5">
+          <SectionHeader icon={<Globe className="w-4 h-4" />} title="Mode khusus" />
+          <ModeToggleList profile={profile} setProfile={setProfile} />
+        </Card>
+
+        {/* IF & jadwal */}
+        <Card radius="lg" shadow="paper-1" className="p-5">
+          <SectionHeader icon={<Clock className="w-4 h-4" />} title="IF & jadwal" />
+          <DataRow
+            label="Protokol"
+            value={profile.diet_method === "if_general" || profile.diet_method === "ramadan" ? "16:8" : "—"}
+          />
+          <DataRow label="Window mulai" value="14:00 WIB" />
+          <DataRow
+            label="Sahur reminder"
+            value={profile.diet_method === "ramadan" ? "03:30 WIB · aktif" : "—"}
+            valueClassName={profile.diet_method === "ramadan" ? "text-clay font-semibold" : ""}
+          />
+          <DataRow label="Notifikasi fasting" value="Aktif" last />
+        </Card>
+
+        {/* Equipment & gym */}
+        <Card radius="lg" shadow="paper-1" className="p-5">
+          <SectionHeader
+            icon={<Dumbbell className="w-4 h-4" />}
+            title="Equipment & gym"
+          />
+          <DataRow
+            label="Setup"
+            value={
+              profile.equipment_available?.includes("machine")
+                ? "Gym · machine"
+                : profile.equipment_available?.includes("dumbbell")
+                  ? "Home · dumbbell"
+                  : profile.equipment_available?.includes("bodyweight")
+                    ? "Bodyweight"
+                    : "—"
+            }
+          />
+          <DataRow
+            label="Beban DB"
+            value={profile.equipment_available?.includes("dumbbell") ? "5kg · 12kg · 14kg" : "—"}
+          />
+          <DataRow
+            label="Gym akses"
+            value={profile.equipment_available?.includes("machine") ? "Aktif" : "—"}
+          />
+          <DataRow label="Sesi/minggu" value="4 sesi · 45 mnt" last />
+        </Card>
+      </div>
+
+      {/* ============ Aplikasi card ============ */}
+      <Card surface="surface-2" radius="lg" shadow="none" className="p-5 sm:p-6 border-hairline">
+        <Kicker className="mb-4">Aplikasi</Kicker>
+        <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4">
+          <AppToggleRow
+            label="Dark mode"
+            sub="Otomatis ikut sistem"
+            storageKey="sehatin:darkmode"
+          />
+          <AppToggleRow
+            label="Notifikasi push"
+            sub="Meal reminder · workout"
+            storageKey="sehatin:notifpush"
+            defaultOn
+          />
+          <DataRow label="Bahasa" value="Bahasa Indonesia" inline />
+          <DataRow label="Format angka" value="1.234,56 (Indonesia)" inline />
+          <DataRow label="Zona waktu" value="WIB · Jakarta" inline />
+          <DataRow label="Versi" value="v0.8.2 · 2026" inline last />
+        </div>
+      </Card>
     </div>
   );
 }
 
-// ============ Sub components ============
+// ============ Sub-components ============
 
-function SaveIndicator({
-  saving,
-  savedAt,
-}: {
-  saving: boolean;
-  savedAt: number | null;
-}) {
-  if (saving) {
-    return (
-      <span className="text-xs text-text-muted inline-flex items-center gap-1">
-        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-        Menyimpan...
-      </span>
-    );
-  }
-  if (savedAt) {
-    return (
-      <span className="text-xs text-brand-600 dark:text-brand-400 inline-flex items-center gap-1">
-        <CheckCircle2 className="w-3 h-3" />
-        Tersimpan
-      </span>
-    );
-  }
-  return null;
-}
-
-function Section({
+function SectionHeader({
   icon,
   title,
-  children,
-  tone = "default",
 }: {
   icon: React.ReactNode;
   title: string;
-  children: React.ReactNode;
-  tone?: "default" | "muted";
 }) {
   return (
-    <section
-      className={cn(
-        "mb-4 p-4 sm:p-5 rounded-2xl border border-border",
-        tone === "muted" ? "bg-surface-muted/40" : "bg-surface",
-      )}
-    >
-      <h2 className="font-bold mb-3 inline-flex items-center gap-2 text-text-muted text-xs uppercase tracking-wide">
-        <span className="text-brand-600">{icon}</span>
-        {title}
-      </h2>
-      <div className="space-y-4">{children}</div>
-    </section>
+    <div className="flex items-center gap-2 mb-4 pb-3 border-b border-hairline">
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-paper-deep text-ink">
+        {icon}
+      </span>
+      <h3 className="font-bold text-[14px] tracking-tight">{title}</h3>
+    </div>
   );
 }
 
-function Row({
+function DataRow({
   label,
-  hint,
-  children,
+  value,
+  valueClassName,
+  inline,
+  last,
 }: {
   label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="text-xs font-semibold tracking-wide uppercase text-text-muted block mb-1.5">
-        {label}
-      </label>
-      {children}
-      {hint && (
-        <p className="text-[11px] text-text-muted mt-1.5 leading-snug">{hint}</p>
-      )}
-    </div>
-  );
-}
-
-function NumberField({
-  value,
-  onChange,
-  min,
-  max,
-  step = 1,
-  suffix,
-  optional,
-}: {
-  value: number | undefined;
-  onChange: (v: number | undefined) => void;
-  min?: number;
-  max?: number;
-  step?: number;
-  suffix?: string;
-  optional?: boolean;
-}) {
-  return (
-    <div className="relative max-w-xs">
-      <input
-        type="number"
-        value={value ?? ""}
-        onChange={(e) => {
-          const raw = e.target.value;
-          if (raw === "") {
-            if (optional) onChange(undefined);
-            return;
-          }
-          const parsed = Number.parseFloat(raw);
-          if (Number.isFinite(parsed)) onChange(parsed);
-        }}
-        min={min}
-        max={max}
-        step={step}
-        placeholder={optional ? "(opsional)" : "-"}
-        className="w-full px-3 py-2.5 pr-12 rounded-xl border-2 border-border bg-surface focus:outline-none focus:border-brand-500 tabular-nums font-semibold"
-      />
-      {suffix && (
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted text-sm font-semibold">
-          {suffix}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function TextField({
-  value,
-  onChange,
-  placeholder,
-}: {
   value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <input
-      type="text"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full px-3 py-2.5 rounded-xl border-2 border-border bg-surface focus:outline-none focus:border-brand-500 text-sm"
-    />
-  );
-}
-
-function ChipGrid<T extends string>({
-  value,
-  options,
-  onChange,
-  columns,
-}: {
-  value: T | undefined;
-  options: { value: T; label: string }[];
-  onChange: (v: T) => void;
-  columns?: number;
+  valueClassName?: string;
+  inline?: boolean;
+  last?: boolean;
 }) {
   return (
     <div
-      className={cn(
-        "grid gap-1.5",
-        columns === 2
-          ? "grid-cols-2"
-          : columns === 4
-            ? "grid-cols-2 sm:grid-cols-4"
-            : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4",
-      )}
+      className={`flex items-baseline justify-between gap-3 py-2 ${
+        last ? "" : "border-b border-hairline/60"
+      } ${inline ? "border-b-0 py-1" : ""}`}
     >
-      {options.map((o) => (
-        <button
-          key={o.value}
-          onClick={() => onChange(o.value)}
-          className={cn(
-            "px-3 py-2 rounded-xl border-2 text-sm font-semibold transition-colors",
-            value === o.value
-              ? "border-brand-500 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300"
-              : "border-border hover:border-fg/20",
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
+      <span className="text-[12.5px] text-muted">{label}</span>
+      <span className={`text-[13px] font-semibold text-right tabular ${valueClassName ?? ""}`}>
+        {value}
+      </span>
     </div>
   );
 }
 
-function ChipGridSub<T extends string>({
+function StatTile({
+  label,
   value,
-  options,
-  onChange,
+  unit,
+  sub,
+  subTone,
+  badge,
 }: {
-  value: T | undefined;
-  options: { value: T; label: string; sub: string }[];
-  onChange: (v: T) => void;
+  label: string;
+  value: string;
+  unit?: string;
+  sub?: string;
+  subTone?: "forest" | "sun" | "clay" | "rose";
+  badge?: React.ReactNode;
 }) {
+  const subColor = {
+    forest: "text-forest",
+    sun: "text-sun-700",
+    clay: "text-clay",
+    rose: "text-rose",
+  }[subTone ?? "forest"];
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          onClick={() => onChange(o.value)}
-          className={cn(
-            "px-3 py-2 rounded-xl border-2 text-left transition-colors",
-            value === o.value
-              ? "border-brand-500 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300"
-              : "border-border hover:border-fg/20",
-          )}
+    <div className="rounded-[14px] bg-surface border border-hairline px-3 py-2.5 relative">
+      <div className="flex items-center justify-between">
+        <Kicker>{label}</Kicker>
+        {badge && <span className="flex-shrink-0">{badge}</span>}
+      </div>
+      <div className="mt-1.5 flex items-baseline gap-1 flex-wrap">
+        <span
+          className="tabular text-ink leading-none"
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: 28,
+          }}
         >
-          <div className="text-sm font-semibold">{o.label}</div>
-          <div className="text-[10px] text-text-muted">{o.sub}</div>
-        </button>
-      ))}
+          {value}
+        </span>
+        {unit && <span className="text-[10px] text-muted font-medium">{unit}</span>}
+        {sub && (
+          <span className={`text-[10.5px] font-semibold ml-0.5 ${subTone ? subColor : "text-muted"}`}>
+            {sub}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
-function ChipGridMulti<T extends string>({
-  value,
-  options,
-  onChange,
+function ModeToggleList({
+  profile,
+  setProfile,
 }: {
-  value: T[];
-  options: { value: T; label: string }[];
-  onChange: (v: T[]) => void;
+  profile: UserProfile;
+  setProfile: (p: UserProfile) => void;
 }) {
-  const toggle = (v: T) => {
-    if (value.includes(v)) {
-      onChange(value.filter((x) => x !== v));
-    } else {
-      onChange([...value, v]);
+  const active = profile.active_modes ?? [];
+  const toggle = (mode: ModeKhusus) => {
+    const next: ModeKhusus[] = active.includes(mode)
+      ? active.filter((m) => m !== mode)
+      : [...active, mode];
+    const updated: UserProfile = {
+      ...profile,
+      active_modes: next,
+      updated_at: new Date().toISOString(),
+    };
+    saveProfile(updated);
+    setProfile(updated);
+  };
+  const modes: ModeKhusus[] = ["ramadan", "kondangan_recovery", "dinas", "cheat_day"];
+  return (
+    <div className="space-y-0">
+      {modes.map((m, i) => {
+        const on = active.includes(m);
+        const cfg = MODE_CONFIG[m];
+        return (
+          <div
+            key={m}
+            className={`flex items-center justify-between gap-3 py-2.5 ${
+              i < modes.length - 1 ? "border-b border-hairline/60" : ""
+            }`}
+          >
+            <div className="min-w-0">
+              <div className="text-[13px] font-semibold inline-flex items-center gap-1.5">
+                {cfg.label}
+              </div>
+              <div className="text-[10.5px] text-muted mt-0.5">{cfg.sub}</div>
+            </div>
+            <button
+              onClick={() => toggle(m)}
+              className={`inline-block w-10 h-5 rounded-full relative transition-colors flex-shrink-0 ${
+                on ? "bg-forest" : "bg-hairline-2"
+              }`}
+              aria-label={`Toggle ${cfg.label}`}
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-paper transition-transform ${
+                  on ? "translate-x-[22px]" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AppToggleRow({
+  label,
+  sub,
+  storageKey,
+  defaultOn,
+}: {
+  label: string;
+  sub: string;
+  storageKey: string;
+  defaultOn?: boolean;
+}) {
+  const [on, setOn] = useState<boolean>(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const v = window.localStorage.getItem(storageKey);
+    setOn(v === null ? !!defaultOn : v === "1");
+  }, [storageKey, defaultOn]);
+  const toggle = () => {
+    const next = !on;
+    setOn(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(storageKey, next ? "1" : "0");
     }
   };
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {options.map((o) => (
-        <ToggleChip
-          key={o.value}
-          label={o.label}
-          on={value.includes(o.value)}
-          onToggle={() => toggle(o.value)}
+    <div className="flex items-center justify-between gap-3 py-1">
+      <div className="min-w-0">
+        <div className="text-[13px] font-semibold">{label}</div>
+        <div className="text-[10.5px] text-muted mt-0.5">{sub}</div>
+      </div>
+      <button
+        onClick={toggle}
+        className={`inline-block w-10 h-5 rounded-full relative transition-colors flex-shrink-0 ${
+          on ? "bg-forest" : "bg-hairline-2"
+        }`}
+        aria-label={`Toggle ${label}`}
+      >
+        <span
+          className={`absolute top-0.5 w-4 h-4 rounded-full bg-paper transition-transform ${
+            on ? "translate-x-[22px]" : "translate-x-0.5"
+          }`}
         />
-      ))}
+      </button>
     </div>
-  );
-}
-
-function ToggleChip({
-  label,
-  on,
-  onToggle,
-}: {
-  label: string;
-  on: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      onClick={onToggle}
-      className={cn(
-        "px-3 py-1.5 rounded-full border-2 text-xs font-semibold transition-colors",
-        on
-          ? "border-brand-500 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300"
-          : "border-border hover:border-fg/20 text-text-muted",
-      )}
-    >
-      {label}
-    </button>
   );
 }

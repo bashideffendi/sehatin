@@ -19,6 +19,12 @@ data/*.db-journal
 data/*.db-wal
 data/*.db-shm
 data/raw/
+public/*.db-journal
+public/*.db-wal
+public/*.db-shm
+
+# Design handoff — large screenshots, not needed in repo
+handoff/
 
 # OS
 .DS_Store

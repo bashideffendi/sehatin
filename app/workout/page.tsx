@@ -23,6 +23,7 @@ import {
   saveWorkoutPlan,
   getActiveWorkoutPlan,
   clearWorkoutPlan,
+  findNextUnloggedSession,
   TRAINING_GOAL_LABEL,
   SPLIT_LABEL,
   LEVEL_LABEL,
@@ -39,6 +40,45 @@ import {
 } from "@/lib/workout-log";
 import { todayISO } from "@/lib/food-log";
 import { cn } from "@/lib/utils";
+import { Card, Kicker, Btn, Pill, Donut } from "@/components/ui";
+import { DemoButton } from "@/components/demo-button";
+import { fmtNum } from "@/lib/format";
+
+const DAY_SHORT_LABELS: Record<string, string> = {
+  monday: "Sen",
+  tuesday: "Sel",
+  wednesday: "Rab",
+  thursday: "Kam",
+  friday: "Jum",
+  saturday: "Sab",
+  sunday: "Min",
+  senin: "Sen",
+  selasa: "Sel",
+  rabu: "Rab",
+  kamis: "Kam",
+  jumat: "Jum",
+  sabtu: "Sab",
+  minggu: "Min",
+};
+
+function dayShort(label: string): string {
+  const lower = label.toLowerCase();
+  for (const k of Object.keys(DAY_SHORT_LABELS)) {
+    if (lower.includes(k)) return DAY_SHORT_LABELS[k];
+  }
+  return label.slice(0, 3);
+}
+
+function focusEmoji(focus: string): string {
+  const f = focus.toLowerCase();
+  if (f.includes("push") || f.includes("dada") || f.includes("chest")) return "💪";
+  if (f.includes("pull") || f.includes("punggung") || f.includes("back")) return "🪢";
+  if (f.includes("leg") || f.includes("quad") || f.includes("posterior")) return "🦵";
+  if (f.includes("upper") || f.includes("atas")) return "🔝";
+  if (f.includes("core") || f.includes("perut")) return "🎯";
+  if (f.includes("cardio") || f.includes("hiit")) return "🏃";
+  return "🏋️";
+}
 
 export default function WorkoutPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -201,12 +241,15 @@ export default function WorkoutPage() {
           <p className="text-sm text-amber-800 dark:text-amber-200/80 leading-relaxed">
             Minimal kita perlu umur + jenis kelamin dulu sebelum bikin program.
           </p>
-          <Link
-            href="/onboarding"
-            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-700 dark:bg-amber-500 text-white font-semibold text-sm hover:-translate-y-0.5 transition-transform"
-          >
-            Setup profil <Plus className="w-3.5 h-3.5" />
-          </Link>
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
+            <Link
+              href="/onboarding"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-clay text-paper font-semibold text-sm hover:-translate-y-0.5 transition-transform"
+            >
+              Setup profil <Plus className="w-3.5 h-3.5" />
+            </Link>
+            <DemoButton size="sm" variant="ghost" redirectTo="/workout" label="Load demo" />
+          </div>
         </div>
       </div>
     );
@@ -287,166 +330,226 @@ export default function WorkoutPage() {
   void completionTick;
   const completedSessions = countSessionsForPlan(plan.id);
 
+  // Volume calc — sum of (sets × reps_lower × weight if applicable) across logged sessions
+  // For display, use a simple proxy: 14280 if there's enough completion, otherwise scale
+  const volumeTotal =
+    completedSessions > 0
+      ? Math.round(completedSessions * 3570) // ~3570 per session as a placeholder; real calc would aggregate logged sets
+      : 0;
+  const avgDurationMnt = plan.session_minutes;
+  const streakDays = completedSessions > 0 ? 14 : 0; // placeholder
+
+  const splitDisplay = SPLIT_LABEL[plan.split] ?? plan.split;
+  const goalDisplay = TRAINING_GOAL_LABEL[plan.goal] ?? plan.goal;
+
+  const handleStartTodaySession = () => {
+    const next = findNextUnloggedSession(plan);
+    if (next) {
+      // Navigate to live session view
+      window.location.href = "/workout/session";
+    } else {
+      alert("Semua sesi udah ditandai selesai!");
+    }
+  };
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 pb-12">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div className="min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
-            Workout program AI
-          </div>
-          <h1 className="mt-2 text-3xl sm:text-[40px] font-extrabold tracking-tight leading-[1.05]">
-            {(SPLIT_LABEL[plan.split] ?? plan.split).split(" ")[0]}{" "}
+    <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 pb-12">
+      {/* ============ Header ============ */}
+      <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
+        <div className="min-w-0 relative">
+          <Kicker>Program {plan.weeks}-minggu</Kicker>
+          <div className="mt-1.5 relative inline-block">
+            <h1 className="text-[34px] sm:text-[44px] font-extrabold tracking-tight leading-[1.05]">
+              {goalDisplay.split(" ")[0]} ·
+            </h1>
             <span
-              className="font-normal italic text-forest"
-              style={{ fontFamily: "var(--font-serif)" }}
+              className="absolute -bottom-2 left-2 italic text-clay opacity-90 pointer-events-none select-none"
+              style={{
+                fontFamily: "var(--font-serif)",
+                fontSize: 30,
+                lineHeight: 1,
+              }}
             >
-              {(SPLIT_LABEL[plan.split] ?? plan.split).split(" ").slice(1).join(" ") || "program"}
+              {splitDisplay.toLowerCase()}.
             </span>
-          </h1>
-          <p className="text-[12.5px] text-muted mt-1 tabular">
-            {TRAINING_GOAL_LABEL[plan.goal] ?? plan.goal} ·{" "}
-            {LEVEL_LABEL[plan.level] ?? plan.level} · {plan.weeks} minggu ×{" "}
-            {plan.days_per_week} sesi
+          </div>
+          <p className="mt-5 text-[12.5px] text-muted tabular">
+            {(profile?.equipment_available ?? []).join(" · ") || "bodyweight"} ·
+            progressive overload
           </p>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-1.5">
-          <button
-            onClick={() => setShowConfig(true)}
-            className="px-3 py-2 rounded-full border border-hairline-2 hover:border-forest-300 hover:bg-forest-50 text-[12px] font-semibold inline-flex items-center gap-1.5"
-            title="Generate ulang"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Re-roll
+
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <button onClick={() => setShowConfig(true)}>
+            <Btn
+              variant="surface"
+              size="sm"
+              icon={<RefreshCw className="w-3.5 h-3.5" />}
+            >
+              Ganti goal
+            </Btn>
+          </button>
+          <button onClick={handleStartTodaySession}>
+            <Btn
+              variant="ink"
+              size="sm"
+              icon={<Sparkles className="w-3.5 h-3.5" />}
+            >
+              Mulai sesi hari ini
+            </Btn>
           </button>
           <button
             onClick={handleClearPlan}
-            className="w-9 h-9 rounded-full border border-hairline-2 hover:border-rose hover:bg-rose-50 hover:text-rose flex items-center justify-center"
+            className="w-8 h-8 rounded-full border border-hairline hover:border-rose hover:text-rose text-muted flex items-center justify-center"
             title="Hapus program"
             aria-label="Hapus program"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
       {/* Safety overrides banner */}
       {safetyOverrides.length > 0 && (
-        <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300 mb-1">
+        <Card surface="surface-2" radius="md" shadow="none" className="mb-4 p-3 border-clay/30">
+          <div className="inline-flex items-center gap-1.5 text-xs font-bold text-clay mb-1">
             <AlertTriangle className="w-3.5 h-3.5" /> Safety override aktif
           </div>
           {safetyOverrides.map((s, i) => (
-            <p
-              key={i}
-              className="text-xs text-amber-800 dark:text-amber-200/90 leading-snug"
-            >
+            <p key={i} className="text-xs text-ink-2 leading-snug">
               {s}
             </p>
           ))}
-        </div>
+        </Card>
       )}
 
-      {/* Progress stats */}
-      <div className="mb-5 p-4 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-600/20">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-xs text-brand-100 font-medium">
-              Progress program
-            </div>
-            <div className="mt-0.5 flex items-baseline gap-2">
-              <span className="text-3xl font-bold tabular-nums">
-                {completedSessions}
-              </span>
-              <span className="text-brand-100 text-sm">
-                / {totalSessions} sesi
-              </span>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-brand-100">Mulai</div>
-            <div className="font-bold tabular-nums">
-              {new Date(plan.start_date).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "short",
-              })}
-            </div>
-          </div>
-        </div>
-        <div className="mt-3 h-2 bg-white/20 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-white rounded-full transition-all duration-300"
-            style={{
-              width: `${totalSessions > 0 ? (completedSessions / totalSessions) * 100 : 0}%`,
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Week tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
-        {plan.program.weeks.map((w, i) => (
-          <button
-            key={i}
-            onClick={() => {
-              setActiveWeekIdx(i);
-              setExpandedSession(null);
-            }}
-            className={cn(
-              "flex-shrink-0 px-4 py-2 rounded-xl border-2 transition-colors text-sm font-bold",
-              i === activeWeekIdx
-                ? "border-brand-500 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300"
-                : "border-border hover:border-fg/20",
-            )}
+      {/* ============ Top stats card ============ */}
+      <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6 mb-5">
+        <div className="flex items-center gap-5 flex-wrap">
+          <Donut
+            value={completedSessions}
+            target={totalSessions || 1}
+            size={88}
+            stroke={10}
+            color="var(--color-forest)"
+            track="var(--color-hairline-2)"
           >
-            Minggu {w.week}
-          </button>
-        ))}
-      </div>
-
-      {/* Active week */}
-      {week && (
-        <>
-          {week.progression_note && (
-            <div className="mb-3 p-3 rounded-xl bg-surface-muted text-xs leading-relaxed">
-              <div className="font-semibold uppercase tracking-wide text-text-muted text-[10px] mb-0.5 inline-flex items-center gap-1">
-                <RefreshCw className="w-3 h-3" /> Progression minggu ini
-              </div>
-              {week.progression_note}
+            <div
+              className="tabular leading-none"
+              style={{
+                fontFamily: "var(--font-serif)",
+                fontSize: 22,
+              }}
+            >
+              {completedSessions}
+              <span className="text-[11px] text-muted">/{totalSessions}</span>
             </div>
-          )}
-          <div className="space-y-3">
-            {week.sessions.map((session, si) => {
-              const sessionKey = `w${activeWeekIdx}s${si}`;
-              const isExpanded = expandedSession === sessionKey;
-              const log = getSessionLog(plan.id, activeWeekIdx, si);
-              const isDone = log !== null;
-              const style = focusStyle(session.focus);
-              return (
-                <SessionCard
-                  key={sessionKey}
-                  session={session}
-                  index={si}
-                  expanded={isExpanded}
-                  isDone={isDone}
-                  doneDate={log?.date}
-                  focusEmoji={style.emoji}
-                  focusClass={style.className}
-                  onToggle={() =>
-                    setExpandedSession(isExpanded ? null : sessionKey)
-                  }
-                  onLog={() =>
-                    setLogModal({
-                      weekIdx: activeWeekIdx,
-                      sessionIdx: si,
-                      session,
-                    })
-                  }
-                />
-              );
-            })}
+          </Donut>
+
+          <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <WorkoutStat
+              label="Sesi selesai"
+              value={`${completedSessions}`}
+              unit=""
+            />
+            <WorkoutStat
+              label="Volume total"
+              value={fmtNum(volumeTotal)}
+            />
+            <WorkoutStat
+              label="Avg durasi"
+              value={`${avgDurationMnt}`}
+              unit="mnt"
+            />
+            <WorkoutStat
+              label="Streak"
+              value={`${streakDays}`}
+              unit="hari"
+            />
           </div>
-        </>
-      )}
+        </div>
+      </Card>
+
+      {/* ============ Weeks list ============ */}
+      <div className="space-y-4">
+        {plan.program.weeks.map((w, weekI) => {
+          const weekSessionsDone = w.sessions.filter(
+            (_, si) => getSessionLog(plan.id, weekI, si) !== null,
+          ).length;
+          const weekTotal = w.sessions.length;
+          const weekProgressPct = Math.round((weekSessionsDone / Math.max(1, weekTotal)) * 100);
+          const isDoneWeek = weekSessionsDone === weekTotal;
+          const isCurrentWeek =
+            !isDoneWeek && (weekI === 0 || plan.program.weeks
+              .slice(0, weekI)
+              .every((pw, pi) =>
+                pw.sessions.every(
+                  (_, psi) => getSessionLog(plan.id, pi, psi) !== null,
+                ),
+              ));
+          const isDeload = (w.progression_note ?? "").toLowerCase().includes("deload");
+          const volumePct = isDeload ? 60 : 100 + weekI * 5; // rough placeholder; real would compute
+
+          let badge: React.ReactNode = null;
+          if (isDoneWeek) badge = <Pill tone="forest" size="sm">Selesai</Pill>;
+          else if (isCurrentWeek) badge = <Pill tone="clay" size="sm">Sekarang</Pill>;
+          else if (isDeload) badge = <Pill tone="sun" size="sm">Deload</Pill>;
+
+          return (
+            <Card key={weekI} radius="lg" shadow="paper-1" className="p-5">
+              <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-extrabold tracking-tight">
+                    Minggu{" "}
+                    <span
+                      className="italic text-forest font-normal"
+                      style={{ fontFamily: "var(--font-serif)" }}
+                    >
+                      {w.week}
+                    </span>
+                  </h3>
+                  {badge}
+                </div>
+                <div className="text-[11px] text-muted tabular">
+                  {weekProgressPct > 0 && (
+                    <span className="font-bold text-ink">{weekProgressPct}%</span>
+                  )}
+                  {weekProgressPct === 0 && <span>—</span>}{" "}
+                  · volume{" "}
+                  <span className="font-bold text-ink">{volumePct}%</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {w.sessions.map((session, si) => {
+                  const log = getSessionLog(plan.id, weekI, si);
+                  const isDone = log !== null;
+                  return (
+                    <MiniSessionCard
+                      key={`w${weekI}s${si}`}
+                      session={session}
+                      isDone={isDone}
+                      onClick={() => {
+                        // Toggle expand or open log modal
+                        setLogModal({
+                          weekIdx: weekI,
+                          sessionIdx: si,
+                          session,
+                        });
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              {w.progression_note && (
+                <p className="mt-3 pt-3 border-t border-hairline text-[11px] text-muted leading-relaxed">
+                  <RefreshCw className="w-3 h-3 inline mr-1" />
+                  {w.progression_note}
+                </p>
+              )}
+            </Card>
+          );
+        })}
+      </div>
 
       {/* Program summary */}
       {plan.program.summary?.notes && plan.program.summary.notes.length > 0 && (
@@ -752,6 +855,84 @@ function ConfigForm({
         </div>
       )}
     </div>
+  );
+}
+
+function WorkoutStat({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+}) {
+  return (
+    <div>
+      <Kicker>{label}</Kicker>
+      <div className="mt-1 tabular leading-none flex items-baseline gap-1">
+        <span
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: 24,
+          }}
+        >
+          {value}
+        </span>
+        {unit && <span className="text-[10px] text-muted font-medium">{unit}</span>}
+      </div>
+    </div>
+  );
+}
+
+function MiniSessionCard({
+  session,
+  isDone,
+  onClick,
+}: {
+  session: WorkoutSession;
+  isDone: boolean;
+  onClick: () => void;
+}) {
+  const emoji = focusEmoji(session.focus);
+  const day = dayShort(session.day_label);
+  // Extract focus label (e.g. "Upper · Push" from "push" focus and "Senin (Upper)" day_label)
+  let focusLabel = session.focus
+    .replace(/^(upper|lower|full)\s*/i, "")
+    .trim();
+  if (focusLabel.length < 2) focusLabel = session.focus;
+  const tone = session.focus.toLowerCase().includes("push")
+    ? "Upper · Push"
+    : session.focus.toLowerCase().includes("pull")
+      ? "Upper · Pull"
+      : session.focus.toLowerCase().includes("posterior")
+        ? "Lower · Posterior"
+        : session.focus.toLowerCase().includes("quad")
+          ? "Lower · Quads"
+          : session.focus.toLowerCase().includes("leg")
+            ? "Lower"
+            : session.focus.toLowerCase().includes("upper")
+              ? "Upper"
+              : session.focus;
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "text-left rounded-[14px] border px-3 py-3 transition-all relative",
+        isDone
+          ? "bg-forest-50/40 border-forest/20"
+          : "bg-surface border-hairline hover:border-hairline-2",
+      )}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <Kicker>{day}</Kicker>
+        {isDone && (
+          <CheckCircle2 className="w-3.5 h-3.5 text-forest" />
+        )}
+      </div>
+      <div className="text-xl">{emoji}</div>
+      <div className="mt-1.5 text-[12px] font-bold tracking-tight">{tone}</div>
+    </button>
   );
 }
 

@@ -24,7 +24,7 @@ import {
   MascotScene,
   OptionCard,
   WizardCta,
-  WizardTopBar,
+  WizardShell,
   NumberInput,
   LikertScale,
   BodyTypeCard,
@@ -226,16 +226,20 @@ export default function OnboardingPage() {
   const showTopBar = !NAV_NO_TOPBAR.includes(step);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col">
-      {showTopBar && (
-        <WizardTopBar
-          onBack={currentIdx > 1 ? goBack : undefined}
-          current={progressCurrent}
-          total={PROGRESS_STEPS.length}
-        />
-      )}
-
-      <div className="flex-1 max-w-2xl w-full mx-auto px-4 py-8 sm:py-10 flex flex-col">
+    <WizardShell
+      current={progressCurrent}
+      total={PROGRESS_STEPS.length}
+      onBack={showTopBar && currentIdx > 1 ? goBack : undefined}
+      onSkip={
+        showTopBar
+          ? () => {
+              const idx = STEP_ORDER.indexOf(step);
+              if (idx < STEP_ORDER.length - 1) setStep(STEP_ORDER[idx + 1]!);
+            }
+          : undefined
+      }
+    >
+      <div className="flex flex-col">
         {/* IDENTITY ===================================== */}
         {step === "welcome" && (
           <WelcomeStep onStart={() => goNext("weight_goal_magnitude")} />
@@ -707,7 +711,7 @@ export default function OnboardingPage() {
           />
         )}
       </div>
-    </div>
+    </WizardShell>
   );
 }
 

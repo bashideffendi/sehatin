@@ -11,6 +11,7 @@ import {
   Calculator,
 } from "lucide-react";
 import { Pill, Btn, Card, Kicker } from "@/components/ui";
+import { DemoButton } from "@/components/demo-button";
 
 export function LandingPage() {
   return (
@@ -75,6 +76,14 @@ export function LandingPage() {
                   Lihat tools
                 </Link>
               </Btn>
+            </div>
+
+            {/* Demo data shortcut — skip onboarding for review */}
+            <div className="mt-4 inline-flex items-center gap-2 flex-wrap">
+              <DemoButton size="sm" variant="clay" redirectTo="/log" />
+              <span className="text-[11px] text-muted">
+                Skip onboarding · Bashid persona · 7-day plan + 30d weight + workout
+              </span>
             </div>
 
             {/* Trust strip */}

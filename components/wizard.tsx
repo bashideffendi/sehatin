@@ -2,9 +2,178 @@
 import { type ReactNode } from "react";
 import { ChevronLeft, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/ui";
 
 // =============================================
-// Progress bar — thin dark fill at top
+// Wizard split-screen shell — design chrome only
+// Desktop: dark forest left (logo + generic copy + progress) + white right (children)
+// Mobile: thin top bar with logo + progress, children below
+// =============================================
+export function WizardShell({
+  current,
+  total,
+  onBack,
+  onSkip,
+  children,
+}: {
+  current: number;
+  total: number;
+  onBack?: () => void;
+  onSkip?: () => void;
+  children: ReactNode;
+}) {
+  const pct = Math.min(100, Math.max(0, (current / total) * 100));
+  const stepLabel = `Step ${String(current).padStart(2, "0")} dari ${String(total).padStart(2, "0")}`;
+  const estTimeSec = Math.max(15, Math.round((total - current) * 5));
+  return (
+    <div className="min-h-screen md:flex bg-paper">
+      {/* ===== LEFT — Dark forest panel ===== */}
+      <aside className="hidden md:flex md:w-[42%] lg:w-[40%] xl:w-[38%] bg-forest text-paper p-10 lg:p-14 flex-col justify-between relative overflow-hidden min-h-screen">
+        {/* Decorative orb */}
+        <span
+          className="absolute -top-16 -right-16 w-80 h-80 rounded-full opacity-25 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(217,124,79,0.6) 0%, transparent 70%)",
+          }}
+        />
+        <span
+          className="absolute bottom-20 -left-20 w-72 h-72 rounded-full opacity-15 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(245,206,90,0.6) 0%, transparent 70%)",
+          }}
+        />
+
+        {/* Logo */}
+        <div className="relative z-10">
+          <Logo light />
+        </div>
+
+        {/* Headline + caption (generic for now — could be made step-specific) */}
+        <div className="relative z-10">
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-paper/55 mb-3">
+            {stepLabel}
+          </div>
+          <h1 className="text-[40px] lg:text-[50px] font-extrabold tracking-tight leading-[1.05]">
+            Cerita dikit
+            <br />
+            <span
+              className="italic text-sun font-normal"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
+              tentang kamu.
+            </span>
+          </h1>
+          <p className="mt-5 text-paper/70 max-w-[28ch] leading-relaxed text-[14px]">
+            Data ini cuma buat hitung kebutuhan kalori dan macro. Tersimpan di
+            device kamu, gak kemana-mana.
+          </p>
+        </div>
+
+        {/* Bottom: progress bar + ETA */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="flex-1 flex gap-1">
+            {Array.from({ length: total }).map((_, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "h-1 flex-1 rounded-full transition-colors",
+                  i < current ? "bg-sun" : "bg-paper/15",
+                )}
+              />
+            ))}
+          </div>
+          <span className="text-[10.5px] text-paper/55 tabular flex-shrink-0">
+            ~ {estTimeSec} detik lagi
+          </span>
+        </div>
+      </aside>
+
+      {/* ===== RIGHT — White content panel ===== */}
+      <main className="flex-1 flex flex-col min-h-screen">
+        {/* Mobile top bar */}
+        <div className="md:hidden sticky top-0 bg-paper z-10 border-b border-hairline">
+          <div className="text-center pt-3 pb-2 px-4">
+            <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted">
+              Onboarding · Quiz{" "}
+              <span
+                className="italic text-clay font-normal"
+                style={{ fontFamily: "var(--font-serif)" }}
+              >
+                60 detik.
+              </span>
+            </div>
+          </div>
+          <div className="h-1 bg-surface-2">
+            <div
+              className="h-full bg-forest transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between px-3 py-2">
+            <button
+              onClick={onBack}
+              disabled={!onBack}
+              className={cn(
+                "inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-[12px] font-semibold",
+                onBack ? "text-ink hover:bg-surface-2" : "text-muted/40 cursor-not-allowed",
+              )}
+              aria-label="Kembali"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <Logo size="sm" />
+            <button
+              onClick={onSkip}
+              className="text-[11px] font-semibold text-muted hover:text-ink px-2"
+            >
+              Skip
+            </button>
+          </div>
+          <div className="px-4 pb-2 flex items-baseline justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
+              Langkah {String(current).padStart(2, "0")} dari{" "}
+              {String(total).padStart(2, "0")}
+            </span>
+            <span className="text-[10px] text-muted tabular">
+              ~ {estTimeSec} detik
+            </span>
+          </div>
+        </div>
+
+        {/* Desktop top bar */}
+        <div className="hidden md:flex items-center justify-between px-10 lg:px-14 pt-6 pb-3">
+          <button
+            onClick={onBack}
+            disabled={!onBack}
+            className={cn(
+              "inline-flex items-center gap-1.5 text-[12.5px] font-semibold",
+              onBack ? "text-forest hover:text-forest-700" : "text-muted/40 cursor-not-allowed",
+            )}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Kembali
+          </button>
+          <button
+            onClick={onSkip}
+            className="text-[12px] font-semibold text-muted hover:text-ink"
+          >
+            Skip langkah
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 px-4 md:px-10 lg:px-14 py-4 md:py-6 max-w-2xl w-full">
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// =============================================
+// Progress bar — thin fill (kept for backward compat)
 // =============================================
 export function WizardProgress({
   current,
@@ -15,9 +184,9 @@ export function WizardProgress({
 }) {
   const pct = Math.min(100, Math.max(0, (current / total) * 100));
   return (
-    <div className="w-full max-w-md mx-auto h-1.5 rounded-full bg-surface-muted overflow-hidden">
+    <div className="w-full h-1.5 rounded-full bg-surface-2 overflow-hidden">
       <div
-        className="h-full bg-fg rounded-full transition-all duration-500 ease-out"
+        className="h-full bg-forest rounded-full transition-all duration-500 ease-out"
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -25,7 +194,7 @@ export function WizardProgress({
 }
 
 // =============================================
-// Mascot — circular avatar with emoji + speech bubble
+// Mascot bubble — kept for compat
 // =============================================
 export function MascotBubble({
   message,
@@ -35,11 +204,11 @@ export function MascotBubble({
   emoji?: string;
 }) {
   return (
-    <div className="flex items-start gap-3 max-w-md mx-auto">
-      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-2xl shadow-md ring-2 ring-white dark:ring-surface">
+    <div className="flex items-start gap-3">
+      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-forest text-paper flex items-center justify-center text-2xl shadow-md">
         {emoji}
       </div>
-      <div className="flex-1 px-5 py-4 rounded-2xl bg-surface shadow-md border border-border">
+      <div className="flex-1 px-5 py-4 rounded-2xl bg-surface shadow-[var(--shadow-paper-1)] border border-hairline">
         <h2 className="text-xl font-bold tracking-tight leading-tight">
           {message}
         </h2>
@@ -49,8 +218,7 @@ export function MascotBubble({
 }
 
 // =============================================
-// Big mascot scene — full avatar with floating decorations
-// Used for welcome screens, milestone moments
+// Big mascot scene — kept for compat
 // =============================================
 export function MascotScene({
   message,
@@ -62,28 +230,25 @@ export function MascotScene({
   emoji?: string;
 }) {
   return (
-    <div className="relative max-w-md mx-auto py-12 text-center">
-      {/* Floating decorations */}
-      <span className="absolute top-4 left-8 text-2xl opacity-70 animate-pulse">
+    <div className="relative py-12 text-center">
+      <span className="absolute top-4 left-8 text-2xl opacity-70 animate-pulse text-sun">
         ✦
       </span>
-      <span className="absolute top-20 right-12 text-xl opacity-60 animate-pulse [animation-delay:0.5s]">
+      <span className="absolute top-20 right-12 text-xl opacity-60 animate-pulse [animation-delay:0.5s] text-clay">
         ✦
       </span>
-      <span className="absolute bottom-12 left-16 text-lg opacity-50 animate-pulse [animation-delay:1s]">
+      <span className="absolute bottom-12 left-16 text-lg opacity-50 animate-pulse [animation-delay:1s] text-forest">
         ✨
       </span>
 
-      <div className="inline-block px-5 py-3 rounded-2xl bg-surface border border-border shadow-md mb-6">
+      <div className="inline-block px-5 py-3 rounded-2xl bg-surface border border-hairline shadow-[var(--shadow-paper-1)] mb-6">
         <p className="text-xl font-bold tracking-tight">{message}</p>
       </div>
       <div className="text-8xl mb-2 select-none animate-bounce [animation-duration:3s]">
         {emoji}
       </div>
       {caption && (
-        <p className="mt-4 text-text-muted text-sm max-w-xs mx-auto">
-          {caption}
-        </p>
+        <p className="mt-4 text-muted text-sm max-w-xs mx-auto">{caption}</p>
       )}
     </div>
   );
@@ -109,36 +274,38 @@ export function OptionCard({
     <button
       onClick={onClick}
       className={cn(
-        "w-full max-w-md mx-auto flex items-center gap-4 px-5 py-4 rounded-2xl bg-surface border-2 text-left transition-all",
-        "hover:border-brand-300 hover:-translate-y-0.5 hover:shadow-md",
+        "w-full flex items-center gap-4 px-4 py-3.5 rounded-[14px] bg-surface border-2 text-left transition-all",
+        "hover:-translate-y-0.5 hover:shadow-[var(--shadow-paper-1)]",
         selected
-          ? "border-brand-500 ring-2 ring-brand-500/20"
-          : "border-border",
+          ? "border-forest bg-forest-50/40"
+          : "border-hairline hover:border-hairline-2",
       )}
     >
-      <span className="text-3xl flex-shrink-0 select-none">{emoji}</span>
+      <span className="text-2xl flex-shrink-0 select-none">{emoji}</span>
       <span className="flex-1 min-w-0">
-        <span className="block font-semibold tracking-tight">{label}</span>
+        <span className="block font-bold tracking-tight text-[14px]">
+          {label}
+        </span>
         {sublabel && (
-          <span className="block text-sm text-text-muted">{sublabel}</span>
+          <span className="block text-[11.5px] text-muted">{sublabel}</span>
         )}
       </span>
       <span
         className={cn(
-          "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+          "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-colors",
           selected
-            ? "border-brand-500 bg-brand-500"
-            : "border-border bg-transparent",
+            ? "bg-forest text-paper"
+            : "border-2 border-hairline-2 bg-transparent",
         )}
       >
-        {selected && <Check className="w-3 h-3 text-white" />}
+        {selected && <Check className="w-3 h-3" />}
       </span>
     </button>
   );
 }
 
 // =============================================
-// Top bar with back button
+// Top bar — kept for compat (now used inside WizardShell on mobile)
 // =============================================
 export function WizardTopBar({
   onBack,
@@ -150,7 +317,7 @@ export function WizardTopBar({
   total: number;
 }) {
   return (
-    <div className="sticky top-0 z-10 backdrop-blur-md bg-bg/80 border-b border-border">
+    <div className="sticky top-0 z-10 bg-paper border-b border-hairline">
       <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
         <button
           onClick={onBack}
@@ -158,8 +325,8 @@ export function WizardTopBar({
           className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center",
             onBack
-              ? "hover:bg-surface-muted text-fg"
-              : "text-text-muted/40 cursor-not-allowed",
+              ? "hover:bg-surface-2 text-ink"
+              : "text-muted/40 cursor-not-allowed",
           )}
           aria-label="Kembali"
         >
@@ -168,7 +335,7 @@ export function WizardTopBar({
         <div className="flex-1">
           <WizardProgress current={current} total={total} />
         </div>
-        <span className="text-xs tabular-nums text-text-muted font-medium">
+        <span className="text-xs tabular text-muted font-medium">
           {current}/{total}
         </span>
       </div>
@@ -189,26 +356,29 @@ export function WizardCta({
   disabled?: boolean;
 }) {
   return (
-    <div className="sticky bottom-0 mt-8 pb-6 pt-4 bg-gradient-to-t from-bg via-bg to-transparent">
+    <div className="mt-8 pb-6 pt-4">
       <button
         onClick={onClick}
         disabled={disabled}
         className={cn(
-          "w-full max-w-md mx-auto block px-6 py-4 rounded-2xl font-semibold tracking-tight text-base transition-all",
+          "inline-flex items-center gap-2 px-6 py-3 rounded-full font-bold tracking-tight text-[14px] transition-all",
           disabled
-            ? "bg-surface-muted text-text-muted cursor-not-allowed"
-            : "bg-fg text-bg shadow-lg hover:-translate-y-0.5 hover:shadow-xl",
+            ? "bg-surface-2 text-muted cursor-not-allowed"
+            : "bg-forest text-paper shadow-[var(--shadow-forest)] hover:-translate-y-0.5",
         )}
       >
         {label}
+        <span className="inline-block">→</span>
       </button>
+      <p className="mt-3 text-[10.5px] text-muted">
+        Tekan <kbd className="px-1.5 py-0.5 rounded bg-surface-2 text-[9.5px] font-bold border border-hairline">Enter</kbd> untuk lanjut
+      </p>
     </div>
   );
 }
 
 // =============================================
-// Likert scale 1-5 (statement + scale buttons)
-// Pattern: bitepal eating psychology questions
+// Likert scale 1-5
 // =============================================
 export function LikertScale({
   statement,
@@ -227,30 +397,30 @@ export function LikertScale({
 }) {
   return (
     <div className="space-y-6">
-      <div className="text-center max-w-md mx-auto">
+      <div className="text-center">
         <h2 className="text-2xl font-bold tracking-tight leading-snug">
           &quot;{statement}&quot;
         </h2>
-        <p className="mt-3 text-text-muted">{prompt}</p>
+        <p className="mt-3 text-muted text-[13px]">{prompt}</p>
       </div>
-      <div className="grid grid-cols-5 gap-2 max-w-md mx-auto">
+      <div className="grid grid-cols-5 gap-2">
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
             onClick={() => onChange(n as 1 | 2 | 3 | 4 | 5)}
             className={cn(
-              "aspect-square rounded-2xl border-2 font-bold text-lg tabular-nums transition-all",
-              "hover:border-brand-400 hover:-translate-y-0.5",
+              "aspect-square rounded-2xl border-2 font-bold text-lg tabular transition-all",
+              "hover:border-forest hover:-translate-y-0.5",
               value === n
-                ? "border-brand-500 bg-brand-500 text-white shadow-md scale-105"
-                : "border-border bg-surface text-fg",
+                ? "border-forest bg-forest text-paper shadow-[var(--shadow-forest)] scale-105"
+                : "border-hairline bg-surface text-ink",
             )}
           >
             {n}
           </button>
         ))}
       </div>
-      <div className="flex justify-between text-xs text-text-muted max-w-md mx-auto px-1">
+      <div className="flex justify-between text-[11px] text-muted px-1">
         <span>{leftLabel}</span>
         <span>{rightLabel}</span>
       </div>
@@ -259,8 +429,7 @@ export function LikertScale({
 }
 
 // =============================================
-// Body silhouette card (visual self-classification)
-// Bitepal uses photos; we use emoji + description for MVP
+// Body silhouette card
 // =============================================
 export function BodyTypeCard({
   emoji,
@@ -279,31 +448,31 @@ export function BodyTypeCard({
     <button
       onClick={onClick}
       className={cn(
-        "w-full max-w-md mx-auto flex items-center gap-5 p-5 rounded-2xl bg-surface border-2 text-left transition-all",
-        "hover:border-brand-300 hover:-translate-y-0.5 hover:shadow-md",
+        "w-full flex items-center gap-5 p-5 rounded-2xl bg-surface border-2 text-left transition-all",
+        "hover:-translate-y-0.5 hover:shadow-[var(--shadow-paper-1)]",
         selected
-          ? "border-brand-500 ring-2 ring-brand-500/20"
-          : "border-border",
+          ? "border-forest bg-forest-50/40"
+          : "border-hairline hover:border-hairline-2",
       )}
     >
       <div
         className={cn(
           "w-20 h-20 rounded-2xl flex items-center justify-center text-5xl flex-shrink-0",
-          selected ? "bg-brand-100 dark:bg-brand-500/15" : "bg-surface-muted",
+          selected ? "bg-forest-50" : "bg-surface-2",
         )}
       >
         {emoji}
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-lg font-bold tracking-tight">{label}</div>
-        <p className="text-sm text-text-muted leading-snug mt-0.5">{desc}</p>
+        <p className="text-[12.5px] text-muted leading-snug mt-0.5">{desc}</p>
       </div>
     </button>
   );
 }
 
 // =============================================
-// Stat row — for personal summary card
+// Stat row
 // =============================================
 export function StatRow({
   icon,
@@ -317,18 +486,18 @@ export function StatRow({
   highlight?: "warning" | "success";
 }) {
   const colorMap = {
-    warning: "text-amber-600",
-    success: "text-brand-600",
+    warning: "text-sun-700",
+    success: "text-forest",
   };
   return (
     <div className="flex items-center gap-3 py-2">
       {icon && (
-        <div className="w-9 h-9 rounded-xl bg-surface-muted flex items-center justify-center text-lg flex-shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-surface-2 flex items-center justify-center text-lg flex-shrink-0">
           {icon}
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <div className="text-xs text-text-muted">{label}</div>
+        <div className="text-[11px] text-muted">{label}</div>
         <div
           className={cn(
             "font-semibold tracking-tight",
@@ -343,7 +512,7 @@ export function StatRow({
 }
 
 // =============================================
-// Number input with stepper + suffix
+// Number input — large serif numeric input
 // =============================================
 export function NumberInput({
   value,
@@ -373,10 +542,14 @@ export function NumberInput({
         step={step}
         placeholder={placeholder}
         inputMode="decimal"
-        className="w-full px-5 py-4 pr-16 rounded-2xl border-2 border-border bg-surface focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-2xl font-bold tabular-nums tracking-tight"
+        className="w-full px-5 py-4 pr-16 rounded-[14px] border border-hairline-2 bg-surface focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/15 tabular tracking-tight"
+        style={{
+          fontFamily: "var(--font-serif)",
+          fontSize: 32,
+        }}
       />
       {suffix && (
-        <span className="absolute right-5 top-1/2 -translate-y-1/2 text-text-muted font-semibold">
+        <span className="absolute right-5 top-1/2 -translate-y-1/2 text-muted font-semibold text-[12px]">
           {suffix}
         </span>
       )}
