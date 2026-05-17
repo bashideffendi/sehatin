@@ -71,6 +71,8 @@ import {
 import { WeeklyChart } from "@/components/weekly-chart";
 import { WeightSparkline } from "@/components/weight-sparkline";
 import { Donut, Card, Kicker, Pill } from "@/components/ui";
+import { LogTimeline } from "@/components/log-timeline";
+import { LogQuickActions } from "@/components/log-quick-actions";
 import { fmtKcal } from "@/lib/format";
 import { cn, fmtNum } from "@/lib/utils";
 
@@ -401,6 +403,43 @@ export default function LogPage() {
           </div>
         )}
       </Card>
+
+      {/* Quick actions + Timeline — 2-col on desktop, stacked on mobile */}
+      <div className="mb-5 grid lg:grid-cols-[1fr_1.1fr] gap-4">
+        <div className="space-y-4">
+          <LogQuickActions
+            onFoto={() => openModal("sarapan", "photo")}
+            onCari={() => openModal("sarapan", "search")}
+          />
+        </div>
+        <div>
+          <LogTimeline
+            entries={summary.entries}
+            unloggedPlanned={(() => {
+              const out: { slot: MealSlot; item: MealItem }[] = [];
+              if (!planDay || date !== todayISO()) return out;
+              const loggedCodes = new Set(
+                summary.entries
+                  .map((e) => e.food_code)
+                  .filter((c): c is string => Boolean(c)),
+              );
+              for (const meal of planDay.meals) {
+                const s = normalizeSlot(meal.slot);
+                if (!s) continue;
+                for (const item of meal.items) {
+                  if (!loggedCodes.has(item.food_code)) {
+                    out.push({ slot: s, item });
+                  }
+                }
+              }
+              return out;
+            })()}
+            onDelete={handleDelete}
+            onLogPlanned={handleLogPlannedItem}
+            onAddManual={() => openModal("sarapan", "manual")}
+          />
+        </div>
+      </div>
 
       {/* Weekly insights */}
       {weekInsights &&

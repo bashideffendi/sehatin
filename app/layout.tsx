@@ -35,13 +35,18 @@ export default function RootLayout({
   return (
     <html lang="id">
       <head>
-        {/* Fonts loaded via @import in globals.css (Plus Jakarta Sans + Instrument Serif).
-            Preconnect for performance. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
           href="https://fonts.gstatic.com"
           crossOrigin=""
+        />
+        {/* Plus Jakarta Sans + Instrument Serif — loaded via <link> for
+            guaranteed first-paint application (the @import in globals.css
+            is a fallback). */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap"
+          rel="stylesheet"
         />
       </head>
       <body className="min-h-screen antialiased bg-paper text-ink">
