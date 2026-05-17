@@ -2,6 +2,7 @@ import type DatabaseType from "better-sqlite3";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
+import { createRequire } from "node:module";
 
 export interface DbOptions {
   /** Open in read-only mode. Required on Vercel (read-only filesystem). */
@@ -9,15 +10,15 @@ export interface DbOptions {
 }
 
 // Synchronous open — for local scripts (db-init, import-*) where the native
-// module is loaded at startup. Production code paths use openDbAsync.
+// module is loaded at startup. Production code paths use getDbAsync.
+// Use createRequire to load better-sqlite3 in an ESM-compatible way
+// (package.json has "type": "module"). require lets Node resolve at runtime
+// against serverExternalPackages.
 let _SyncDatabase: typeof DatabaseType | null = null;
+const _require = createRequire(import.meta.url);
 function loadSyncDatabase(): typeof DatabaseType {
   if (_SyncDatabase) return _SyncDatabase;
-  // Use require to lazily resolve — Turbopack bundles native modules differently
-  // depending on whether the import is static or dynamic. require lets Node
-  // resolve at runtime against serverExternalPackages.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  _SyncDatabase = require("better-sqlite3") as typeof DatabaseType;
+  _SyncDatabase = _require("better-sqlite3") as typeof DatabaseType;
   return _SyncDatabase;
 }
 
@@ -63,11 +64,16 @@ export function getDb(path: string, opts: DbOptions = {}): DatabaseType.Database
  */
 export function getDbPath(): string {
   if (process.env.DB_PATH) return process.env.DB_PATH;
-  const publicPath = join(process.cwd(), "public", "sehatin.db");
-  try {
-    if (existsSync(publicPath)) return publicPath;
-  } catch {
-    /* ignore */
+  // On Vercel runtime, prefer public/ (gets bundled, copied to /tmp by
+  // resolveDbPath). Locally, prefer data/ which is writable for scripts.
+  const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
+  if (isVercel) {
+    const publicPath = join(process.cwd(), "public", "sehatin.db");
+    try {
+      if (existsSync(publicPath)) return publicPath;
+    } catch {
+      /* ignore */
+    }
   }
   return join(process.cwd(), "data", "sehatin.db");
 }

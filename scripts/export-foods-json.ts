@@ -1,16 +1,21 @@
 /**
- * Export compact TKPI foods data → public/foods.json untuk client-side search.
+ * Export compact foods data → public/foods.json untuk client-side search.
  *
- * Output: { generated_at, count, foods: [{code, name, kategori, tipe, kcal, p, f, c}] }
- * Size estimate: ~150 KB untuk 1,146 items.
+ * Includes:
+ *   - TKPI Kemenkes (bahan + makanan tradisional Indonesia)
+ *   - OpenFoodFacts ID (produk kemasan branded: Indomie, Sosro, Coca-Cola, dll)
+ *
+ * Output: { generated_at, count, foods: [{code, name, kategori, tipe, kcal, p, f, c, fib}] }
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { getDb, getDbPath } from "../src/db/client.ts";
 
 interface FoodRow {
+  source: string;
   source_id: string;
   name: string;
+  brand: string | null;
   categories: string | null;
   kcal_per_100g: number | null;
   protein_per_100g: number | null;
@@ -32,25 +37,61 @@ interface CompactFoodOut {
 }
 
 const db = getDb(getDbPath());
+
+// Pull TKPI + OFF together. OFF entries always Olahan (packaged products).
 const rows = db
   .prepare(`
-    SELECT source_id, name, categories,
+    SELECT source, source_id, name, brand, categories,
            kcal_per_100g, protein_per_100g, fat_per_100g, carb_per_100g, fiber_per_100g
     FROM foods
-    WHERE source = 'tkpi'
-    ORDER BY name
+    WHERE source IN ('tkpi', 'openfoodfacts')
+      AND kcal_per_100g IS NOT NULL
+    ORDER BY source, name
   `)
   .all() as FoodRow[];
 
 const foods: CompactFoodOut[] = rows.map((r) => {
-  const cats = (r.categories ?? "").split(",").map((s) => s.trim());
-  const kategori = cats[0] ?? "Lain";
-  const tipe = (cats[1] ?? "").includes("Olahan") ? "Olahan" : "Mentah";
+  if (r.source === "tkpi") {
+    const cats = (r.categories ?? "").split(",").map((s) => s.trim());
+    const kategori = cats[0] ?? "Lain";
+    const tipe: "Mentah" | "Olahan" = (cats[1] ?? "").includes("Olahan")
+      ? "Olahan"
+      : "Mentah";
+    return {
+      code: r.source_id,
+      name: r.name,
+      kategori,
+      tipe,
+      kcal: r.kcal_per_100g,
+      p: r.protein_per_100g,
+      f: r.fat_per_100g,
+      c: r.carb_per_100g,
+      fib: r.fiber_per_100g,
+    };
+  }
+  // OpenFoodFacts — packaged branded product
+  const name = r.brand
+    ? `${r.name} (${r.brand.split(",")[0]?.trim()})`
+    : r.name;
+  const cats = (r.categories ?? "").toLowerCase();
+  let kategori = "Produk kemasan";
+  if (cats.includes("beverage") || cats.includes("drink") || cats.includes("minuman"))
+    kategori = "Minuman kemasan";
+  else if (cats.includes("snack") || cats.includes("chip") || cats.includes("camilan"))
+    kategori = "Snack kemasan";
+  else if (cats.includes("dairy") || cats.includes("milk") || cats.includes("susu"))
+    kategori = "Susu kemasan";
+  else if (cats.includes("noodle") || cats.includes("mie") || cats.includes("pasta"))
+    kategori = "Mie kemasan";
+  else if (cats.includes("bread") || cats.includes("roti") || cats.includes("bakery"))
+    kategori = "Roti kemasan";
+  else if (cats.includes("breakfast") || cats.includes("cereal") || cats.includes("sereal"))
+    kategori = "Sarapan kemasan";
   return {
-    code: r.source_id,
-    name: r.name,
+    code: `OFF-${r.source_id}`,
+    name,
     kategori,
-    tipe,
+    tipe: "Olahan",
     kcal: r.kcal_per_100g,
     p: r.protein_per_100g,
     f: r.fat_per_100g,
@@ -61,7 +102,7 @@ const foods: CompactFoodOut[] = rows.map((r) => {
 
 const output = {
   generated_at: new Date().toISOString(),
-  source: "TKPI Kemenkes RI via Sehatin SQLite",
+  source: "TKPI Kemenkes + OpenFoodFacts Indonesia via Sehatin SQLite",
   count: foods.length,
   foods,
 };
@@ -72,6 +113,9 @@ const outPath = join(publicDir, "foods.json");
 writeFileSync(outPath, JSON.stringify(output));
 
 const size = (JSON.stringify(output).length / 1024).toFixed(1);
+const tkpiCount = foods.filter((f) => !f.code.startsWith("OFF-")).length;
+const offCount = foods.length - tkpiCount;
 console.log(`Exported ${foods.length} foods → ${outPath} (${size} KB)`);
+console.log(`  TKPI: ${tkpiCount} · OpenFoodFacts: ${offCount}`);
 
 db.close();
