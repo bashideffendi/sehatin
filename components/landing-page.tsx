@@ -10,12 +10,46 @@ import {
   Activity,
   Calculator,
 } from "lucide-react";
-import { Pill, Btn, Card, Kicker } from "@/components/ui";
+import { Pill, Btn, Card, Kicker, Logo } from "@/components/ui";
 import { DemoButton } from "@/components/demo-button";
 
 export function LandingPage() {
   return (
     <div className="bg-paper">
+      {/* ============ MARKETING TOP NAV ============ */}
+      <header className="sticky top-0 z-30 bg-paper/85 backdrop-blur-md border-b border-hairline">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          <Link href="/" className="inline-flex items-center">
+            <Logo size="md" />
+          </Link>
+          <nav className="hidden sm:flex items-center gap-1">
+            <Link
+              href="/tools"
+              className="px-3 py-2 rounded-full text-[13px] font-semibold text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+            >
+              Tools
+            </Link>
+            <a
+              href="#yang-beda"
+              className="px-3 py-2 rounded-full text-[13px] font-semibold text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+            >
+              Yang beda
+            </a>
+            <a
+              href="#cara-kerja"
+              className="px-3 py-2 rounded-full text-[13px] font-semibold text-muted hover:text-ink hover:bg-surface-2 transition-colors"
+            >
+              Cara kerja
+            </a>
+          </nav>
+          <Link href="/onboarding">
+            <Btn variant="primary" size="sm" iconRight={<ArrowRight />}>
+              Mulai quiz
+            </Btn>
+          </Link>
+        </div>
+      </header>
+
       {/* ============ HERO ============ */}
       <section className="relative overflow-hidden">
         {/* gradient orbs */}
@@ -126,7 +160,7 @@ export function LandingPage() {
       </section>
 
       {/* ============ VALUE PROPS ============ */}
-      <section className="border-t border-hairline bg-paper">
+      <section id="yang-beda" className="border-t border-hairline bg-paper scroll-mt-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
           <div className="max-w-2xl mb-10 sm:mb-14">
             <Kicker>Yang beda</Kicker>
@@ -172,7 +206,7 @@ export function LandingPage() {
       </section>
 
       {/* ============ HOW IT WORKS (forest dark section) ============ */}
-      <section className="relative overflow-hidden bg-forest text-paper">
+      <section id="cara-kerja" className="relative overflow-hidden bg-forest text-paper scroll-mt-20">
         <div className="dot-grid absolute inset-0 opacity-30" aria-hidden />
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
           <div className="max-w-2xl mb-10 sm:mb-14">
