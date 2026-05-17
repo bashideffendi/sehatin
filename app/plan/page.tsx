@@ -41,7 +41,6 @@ import {
 import { calculateTargets } from "@/src/nutrition/tdee";
 import { AddFoodModal } from "@/components/add-food-modal";
 import { Card, Kicker, Btn, Pill } from "@/components/ui";
-import { DemoButton } from "@/components/demo-button";
 import { fmtKcal, rupiah, rupiahShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -323,7 +322,6 @@ export default function PlanPage() {
                 Lengkapi profil
               </Btn>
             </Link>
-            <DemoButton size="sm" variant="ghost" redirectTo="/plan" label="Load demo" />
           </div>
         </Card>
       </div>
@@ -380,10 +378,6 @@ export default function PlanPage() {
           <Plus className="w-4 h-4" />
           Bikin plan manual ({days} hari × {mealsPerDay} meal kosong)
         </button>
-
-        <div className="mt-6 text-center">
-          <DemoButton size="sm" variant="ghost" redirectTo="/plan" label="Atau pakai demo plan" />
-        </div>
       </div>
     );
   }

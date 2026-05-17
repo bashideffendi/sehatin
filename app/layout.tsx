@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
-import { DemoFloater } from "@/components/demo-floater";
 
 export const metadata: Metadata = {
   title: "Sehatin — Nutrisi dan latihan, data Indonesia",
@@ -58,7 +57,6 @@ export default function RootLayout({
             <Footer />
           </div>
         </div>
-        <DemoFloater />
       </body>
     </html>
   );

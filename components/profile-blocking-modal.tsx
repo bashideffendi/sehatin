@@ -2,11 +2,10 @@
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { Card, Kicker, Btn, Pill } from "@/components/ui";
-import { DemoButton } from "@/components/demo-button";
 
 /**
  * Blocks the dashboard when user has "entered app" but profile isn't filled.
- * Force them to /onboarding (or demo data) before they can use the app.
+ * Force them to /onboarding before they can use the app.
  */
 export function ProfileBlockingModal() {
   return (
@@ -62,19 +61,8 @@ export function ProfileBlockingModal() {
                 Mulai quiz
               </Btn>
             </Link>
-            <div className="flex items-center gap-2 text-[10px] text-muted">
-              <div className="h-px flex-1 bg-hairline" />
-              <span className="font-bold uppercase tracking-wider">atau</span>
-              <div className="h-px flex-1 bg-hairline" />
-            </div>
-            <DemoButton
-              size="md"
-              variant="ghost"
-              redirectTo="reload"
-              label="Pake demo data dulu"
-            />
             <p className="text-[10.5px] text-muted text-center mt-1">
-              Demo isi profile + 7-day plan + workout. Bisa edit nanti.
+              Tersimpan di akun kamu — bisa edit kapan aja di Profil.
             </p>
           </div>
         </div>

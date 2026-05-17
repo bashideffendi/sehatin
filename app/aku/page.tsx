@@ -23,7 +23,6 @@ import {
   type ModeKhusus,
 } from "@/lib/profile";
 import { Card, Kicker, Pill, Btn } from "@/components/ui";
-import { DemoButton } from "@/components/demo-button";
 
 // ============ Display helpers ============
 
@@ -167,14 +166,13 @@ export default function AkuPage() {
           <p className="mt-2 text-muted">
             Setup profil dulu biar bisa lihat data kamu.
           </p>
-          <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2">
+          <div className="mt-4 flex items-center justify-center">
             <Link
               href="/onboarding"
               className="inline-flex items-center px-4 py-2 rounded-full bg-forest text-paper font-semibold text-sm"
             >
               Mulai onboarding
             </Link>
-            <DemoButton size="sm" variant="clay" redirectTo="/aku" />
           </div>
         </div>
       </div>

@@ -41,7 +41,6 @@ import {
 import { todayISO } from "@/lib/food-log";
 import { cn } from "@/lib/utils";
 import { Card, Kicker, Btn, Pill, Donut } from "@/components/ui";
-import { DemoButton } from "@/components/demo-button";
 import { fmtNum } from "@/lib/format";
 
 const DAY_SHORT_LABELS: Record<string, string> = {
@@ -248,7 +247,6 @@ export default function WorkoutPage() {
             >
               Setup profil <Plus className="w-3.5 h-3.5" />
             </Link>
-            <DemoButton size="sm" variant="ghost" redirectTo="/workout" label="Load demo" />
           </div>
         </div>
       </div>

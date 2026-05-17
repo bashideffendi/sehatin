@@ -11,7 +11,6 @@ import {
   Calculator,
 } from "lucide-react";
 import { Pill, Btn, Card, Kicker, Logo } from "@/components/ui";
-import { DemoButton } from "@/components/demo-button";
 import { markEnteredApp } from "@/lib/session";
 
 export function LandingPage() {
@@ -120,14 +119,6 @@ export function LandingPage() {
                   Coba tools dulu
                 </Link>
               </Btn>
-            </div>
-
-            {/* Demo data shortcut — skip onboarding for review */}
-            <div className="mt-4 inline-flex items-center gap-2 flex-wrap">
-              <DemoButton size="sm" variant="clay" redirectTo="/log" />
-              <span className="text-[11px] text-muted">
-                Skip quiz · langsung liat plan jadinya kayak gimana
-              </span>
             </div>
 
             {/* Trust strip */}
