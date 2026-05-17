@@ -14,12 +14,19 @@ export function WizardShell({
   total,
   onBack,
   onSkip,
+  cta,
   children,
 }: {
   current: number;
   total: number;
   onBack?: () => void;
   onSkip?: () => void;
+  /**
+   * Optional sticky bottom CTA bar (typically a Lanjut button). When provided,
+   * renders at the bottom of the right panel, always visible regardless of
+   * scroll position. Pass a `<WizardCta />` or any button-like ReactNode.
+   */
+  cta?: ReactNode;
   children: ReactNode;
 }) {
   const pct = Math.min(100, Math.max(0, (current / total) * 100));
@@ -167,6 +174,13 @@ export function WizardShell({
         <div className="flex-1 px-4 md:px-10 lg:px-14 py-4 md:py-6 max-w-2xl w-full">
           {children}
         </div>
+
+        {/* Sticky bottom CTA bar (visible regardless of scroll) */}
+        {cta && (
+          <div className="sticky bottom-0 z-20 bg-paper/95 backdrop-blur-sm border-t border-hairline px-4 md:px-10 lg:px-14 py-3 md:py-4">
+            <div className="max-w-2xl w-full">{cta}</div>
+          </div>
+        )}
       </main>
     </div>
   );
@@ -345,18 +359,22 @@ export function WizardTopBar({
 
 // =============================================
 // Bottom CTA button
+// `compact` strips the outer mt-8 pb-6 pt-4 padding — use when rendered
+// inside the WizardShell sticky CTA bar (which provides its own padding).
 // =============================================
 export function WizardCta({
   label = "Lanjut",
   onClick,
   disabled,
+  compact,
 }: {
   label?: string;
   onClick: () => void;
   disabled?: boolean;
+  compact?: boolean;
 }) {
   return (
-    <div className="mt-8 pb-6 pt-4">
+    <div className={compact ? "" : "mt-8 pb-6 pt-4"}>
       <button
         onClick={onClick}
         disabled={disabled}
@@ -370,9 +388,11 @@ export function WizardCta({
         {label}
         <span className="inline-block">→</span>
       </button>
-      <p className="mt-3 text-[10.5px] text-muted">
-        Tekan <kbd className="px-1.5 py-0.5 rounded bg-surface-2 text-[9.5px] font-bold border border-hairline">Enter</kbd> untuk lanjut
-      </p>
+      {!compact && (
+        <p className="mt-3 text-[10.5px] text-muted">
+          Tekan <kbd className="px-1.5 py-0.5 rounded bg-surface-2 text-[9.5px] font-bold border border-hairline">Enter</kbd> untuk lanjut
+        </p>
+      )}
     </div>
   );
 }

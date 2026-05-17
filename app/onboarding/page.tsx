@@ -179,6 +179,92 @@ const NAV_NO_TOPBAR: Step[] = [
   "result",
 ];
 
+// Single-select steps that show a sticky "Lanjut" CTA at the bottom of the
+// right panel. These previously auto-advanced 200ms after selection — now
+// the CTA gives the user explicit control + visual reassurance.
+// Multi-select / number-input steps still render their own inline WizardCta.
+const STEPS_WITH_STICKY_CTA: readonly Step[] = [
+  "weight_goal_magnitude",
+  "sex",
+  "age_bracket",
+  "main_motivation",
+  "current_body",
+  "target_body",
+  "activity",
+  "tracker",
+  "special_occasion",
+  "sleep",
+  "water",
+  "diet",
+  "snack_time",
+  "psy_plate",
+  "psy_emotional",
+  "psy_mindless",
+  "psy_consistency",
+  "underlying_motivation",
+  "readiness",
+  "habit_anchor",
+  "pace",
+  "body_image_sat",
+  "province",
+  "budget",
+];
+
+function canContinueFor(step: Step, p: Partial<UserProfile>): boolean {
+  switch (step) {
+    case "weight_goal_magnitude":
+      return !!p.weight_goal_magnitude;
+    case "sex":
+      return !!p.sex;
+    case "age_bracket":
+      return !!p.age_bracket;
+    case "main_motivation":
+      return !!p.main_motivation;
+    case "current_body":
+      return !!p.current_body_type;
+    case "target_body":
+      return !!p.target_body_type;
+    case "activity":
+      return !!p.activity;
+    case "tracker":
+      return p.uses_fitness_tracker !== undefined;
+    case "special_occasion":
+      return !!p.special_occasion;
+    case "sleep":
+      return !!p.sleep_duration;
+    case "water":
+      return !!p.water_consumption;
+    case "diet":
+      return !!p.diet_method;
+    case "snack_time":
+      return !!p.snack_time;
+    case "psy_plate":
+      return !!p.eating_psychology?.plate_clearing;
+    case "psy_emotional":
+      return !!p.eating_psychology?.emotional_eating;
+    case "psy_mindless":
+      return !!p.eating_psychology?.mindless_eating;
+    case "psy_consistency":
+      return !!p.eating_psychology?.consistency_struggle;
+    case "underlying_motivation":
+      return !!p.underlying_motivation;
+    case "readiness":
+      return !!p.readiness_level;
+    case "habit_anchor":
+      return !!p.habit_anchor;
+    case "pace":
+      return !!p.pace_preference;
+    case "body_image_sat":
+      return !!p.body_image_satisfaction;
+    case "province":
+      return !!p.province_id;
+    case "budget":
+      return p.budget_idr_per_day !== undefined && p.budget_idr_per_day > 0;
+    default:
+      return false;
+  }
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("welcome");
@@ -227,6 +313,16 @@ export default function OnboardingPage() {
 
   const showTopBar = !NAV_NO_TOPBAR.includes(step);
 
+  // Sticky CTA bar: only for single-select steps that previously auto-advanced.
+  // Multi-select / number-input steps render their own inline WizardCta.
+  const stickyCta = STEPS_WITH_STICKY_CTA.includes(step) ? (
+    <WizardCta
+      onClick={() => goNext()}
+      disabled={!canContinueFor(step, profile)}
+      compact
+    />
+  ) : undefined;
+
   return (
     <WizardShell
       current={progressCurrent}
@@ -240,6 +336,7 @@ export default function OnboardingPage() {
             }
           : undefined
       }
+      cta={stickyCta}
     >
       <div className="flex flex-col">
         {/* IDENTITY ===================================== */}
@@ -264,7 +361,6 @@ export default function OnboardingPage() {
                           ? "maintain"
                           : "muscle_gain",
               });
-              setTimeout(() => goNext("sex"), 200);
             }}
           />
         )}
@@ -274,7 +370,6 @@ export default function OnboardingPage() {
             value={profile.sex}
             onChange={(sex) => {
               update({ sex });
-              setTimeout(() => goNext("age_bracket"), 200);
             }}
           />
         )}
@@ -284,7 +379,6 @@ export default function OnboardingPage() {
             value={profile.age_bracket}
             onChange={(age_bracket) => {
               update({ age_bracket });
-              setTimeout(() => goNext("is_social_1"), 200);
             }}
           />
         )}
@@ -299,7 +393,6 @@ export default function OnboardingPage() {
             value={profile.main_motivation}
             onChange={(v) => {
               update({ main_motivation: v });
-              setTimeout(() => goNext("current_body"), 200);
             }}
           />
         )}
@@ -311,7 +404,6 @@ export default function OnboardingPage() {
             sex={profile.sex}
             onChange={(v) => {
               update({ current_body_type: v });
-              setTimeout(() => goNext("target_body"), 200);
             }}
           />
         )}
@@ -322,7 +414,6 @@ export default function OnboardingPage() {
             sex={profile.sex}
             onChange={(v) => {
               update({ target_body_type: v });
-              setTimeout(() => goNext("target_zones"), 200);
             }}
           />
         )}
@@ -355,7 +446,6 @@ export default function OnboardingPage() {
             value={profile.activity}
             onChange={(activity) => {
               update({ activity });
-              setTimeout(() => goNext("tracker"), 200);
             }}
           />
         )}
@@ -365,7 +455,6 @@ export default function OnboardingPage() {
             value={profile.uses_fitness_tracker}
             onChange={(v) => {
               update({ uses_fitness_tracker: v });
-              setTimeout(() => goNext("medical"), 200);
             }}
           />
         )}
@@ -450,7 +539,6 @@ export default function OnboardingPage() {
             value={profile.special_occasion}
             onChange={(v) => {
               update({ special_occasion: v });
-              setTimeout(() => goNext("event_date"), 200);
             }}
           />
         )}
@@ -478,7 +566,6 @@ export default function OnboardingPage() {
             value={profile.sleep_duration}
             onChange={(v) => {
               update({ sleep_duration: v });
-              setTimeout(() => goNext("water"), 200);
             }}
           />
         )}
@@ -488,7 +575,6 @@ export default function OnboardingPage() {
             value={profile.water_consumption}
             onChange={(v) => {
               update({ water_consumption: v });
-              setTimeout(() => goNext("eat_locations"), 200);
             }}
           />
         )}
@@ -513,7 +599,6 @@ export default function OnboardingPage() {
             value={profile.diet_method}
             onChange={(diet_method) => {
               update({ diet_method });
-              setTimeout(() => goNext("snack_time"), 200);
             }}
           />
         )}
@@ -523,7 +608,6 @@ export default function OnboardingPage() {
             value={profile.snack_time}
             onChange={(v) => {
               update({ snack_time: v });
-              setTimeout(() => goNext("psy_plate"), 200);
             }}
           />
         )}
@@ -540,7 +624,6 @@ export default function OnboardingPage() {
                   plate_clearing: v,
                 },
               });
-              setTimeout(() => goNext("psy_emotional"), 250);
             }}
           />
         )}
@@ -556,7 +639,6 @@ export default function OnboardingPage() {
                   emotional_eating: v,
                 },
               });
-              setTimeout(() => goNext("psy_mindless"), 250);
             }}
           />
         )}
@@ -572,7 +654,6 @@ export default function OnboardingPage() {
                   mindless_eating: v,
                 },
               });
-              setTimeout(() => goNext("psy_consistency"), 250);
             }}
           />
         )}
@@ -588,7 +669,6 @@ export default function OnboardingPage() {
                   consistency_struggle: v,
                 },
               });
-              setTimeout(() => goNext("underlying_motivation"), 250);
             }}
           />
         )}
@@ -598,7 +678,6 @@ export default function OnboardingPage() {
             value={profile.underlying_motivation}
             onChange={(v) => {
               update({ underlying_motivation: v });
-              setTimeout(() => goNext("readiness"), 200);
             }}
           />
         )}
@@ -608,7 +687,6 @@ export default function OnboardingPage() {
             value={profile.readiness_level}
             onChange={(v) => {
               update({ readiness_level: v });
-              setTimeout(() => goNext("habit_anchor"), 200);
             }}
           />
         )}
@@ -618,7 +696,6 @@ export default function OnboardingPage() {
             value={profile.habit_anchor}
             onChange={(v) => {
               update({ habit_anchor: v });
-              setTimeout(() => goNext("pace"), 200);
             }}
           />
         )}
@@ -628,7 +705,6 @@ export default function OnboardingPage() {
             value={profile.pace_preference}
             onChange={(v) => {
               update({ pace_preference: v });
-              setTimeout(() => goNext("is_prediction_2"), 200);
             }}
           />
         )}
@@ -661,7 +737,6 @@ export default function OnboardingPage() {
             value={profile.body_image_satisfaction}
             onChange={(v) => {
               update({ body_image_satisfaction: v });
-              setTimeout(() => goNext("province"), 200);
             }}
           />
         )}
@@ -672,7 +747,6 @@ export default function OnboardingPage() {
             value={profile.province_id}
             onChange={(v) => {
               update({ province_id: v });
-              setTimeout(() => goNext("budget"), 200);
             }}
           />
         )}
@@ -682,7 +756,6 @@ export default function OnboardingPage() {
             value={profile.budget_idr_per_day}
             onChange={(v) => {
               update({ budget_idr_per_day: v });
-              setTimeout(() => goNext("equipment"), 200);
             }}
           />
         )}
