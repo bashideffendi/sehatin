@@ -23,21 +23,33 @@ import {
 } from "./workout";
 import { upsertSession } from "./workout-log";
 
-/** Shift YYYY-MM-DD by N days (negative = earlier). */
-function shiftDate(iso: string, days: number): string {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+/** Pad 2-digit. */
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
 }
 
-/** Build ISO timestamp for today at HH:MM. */
+/**
+ * Shift YYYY-MM-DD by N days (negative = earlier).
+ * TZ-safe: operates on local date components, no UTC conversion.
+ */
+function shiftDate(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(
+    date.getDate(),
+  )}`;
+}
+
+/** Build ISO timestamp for today at HH:MM (local TZ). */
 function todayAt(hour: number, minute: number): string {
   const d = new Date();
   d.setHours(hour, minute, 0, 0);
   return d.toISOString();
 }
 
-/** Build ISO timestamp N days ago at HH:MM. */
+/** Build ISO timestamp N days ago at HH:MM (local TZ). */
 function pastDayAt(daysAgo: number, hour: number, minute: number): string {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
