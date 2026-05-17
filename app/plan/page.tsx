@@ -405,35 +405,36 @@ export default function PlanPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6">
         <div className="min-w-0">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 mb-1">
-            <Sparkles className="w-3.5 h-3.5" /> Meal plan AI
+          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+            Meal plan AI
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            Plan {plan.days} hari
+          <h1 className="mt-2 text-3xl sm:text-[40px] font-extrabold tracking-tight leading-[1.05]">
+            Plan{" "}
+            <span
+              className="font-normal italic text-forest"
+              style={{ fontFamily: "var(--font-serif)" }}
+            >
+              {plan.days} hari
+            </span>
           </h1>
-          <p className="text-sm text-text-muted mt-0.5">
+          <p className="text-[12.5px] text-muted mt-1 tabular">
             {plan.diet_method && plan.diet_method !== "standard"
               ? `${plan.diet_method.replace(/_/g, " ")} · `
               : ""}
-            Target {fmtNum(plan.targets.target_kcal)} kcal/hari · digenerate{" "}
-            {new Date(plan.generated_at).toLocaleDateString("id-ID", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })}
+            Target {fmtNum(plan.targets.target_kcal)} kcal/hari
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1.5">
           <button
             onClick={() => setShowConfig(true)}
-            className="px-3 py-2 rounded-lg border border-border hover:border-brand-300 text-xs font-semibold inline-flex items-center gap-1.5"
+            className="px-3 py-2 rounded-full border border-hairline-2 hover:border-forest-300 hover:bg-forest-50 text-[12px] font-semibold inline-flex items-center gap-1.5"
             title="Generate ulang"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Ulangi
+            <RefreshCw className="w-3.5 h-3.5" /> Re-roll
           </button>
           <button
             onClick={handleClearPlan}
-            className="w-9 h-9 rounded-lg border border-border hover:border-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600 flex items-center justify-center"
+            className="w-9 h-9 rounded-full border border-hairline-2 hover:border-rose hover:bg-rose-50 hover:text-rose flex items-center justify-center"
             title="Hapus plan"
             aria-label="Hapus plan"
           >

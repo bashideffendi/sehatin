@@ -70,6 +70,8 @@ import {
 } from "@/lib/insights";
 import { WeeklyChart } from "@/components/weekly-chart";
 import { WeightSparkline } from "@/components/weight-sparkline";
+import { Donut, Card, Kicker, Pill } from "@/components/ui";
+import { fmtKcal } from "@/lib/format";
 import { cn, fmtNum } from "@/lib/utils";
 
 function shiftDate(iso: string, days: number): string {
@@ -273,91 +275,127 @@ export default function LogPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 pb-32">
       {/* Date nav */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => setDate(shiftDate(date, -1))}
-          className="w-10 h-10 rounded-lg hover:bg-surface-muted flex items-center justify-center"
-          aria-label="Hari sebelumnya"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <DatePopover
-          value={date}
-          max={todayISO()}
-          onChange={(d) => setDate(d)}
-          highlightedDates={loggedDates}
-        >
-          <div className="flex items-center justify-center gap-1.5 text-sm text-text-muted">
-            <Calendar className="w-3.5 h-3.5" />
-            <span className="tabular-nums">
-              {new Date(date).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
-          </div>
-          <span className="block text-2xl font-bold tracking-tight">
-            {formatDateID(date)}
-          </span>
-        </DatePopover>
-        <button
-          onClick={() => setDate(shiftDate(date, 1))}
-          disabled={date >= todayISO()}
-          className={cn(
-            "w-10 h-10 rounded-lg flex items-center justify-center",
-            date >= todayISO()
-              ? "text-text-muted/40 cursor-not-allowed"
-              : "hover:bg-surface-muted",
-          )}
-          aria-label="Hari berikutnya"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <Kicker>Catatan harian</Kicker>
+          <DatePopover
+            value={date}
+            max={todayISO()}
+            onChange={(d) => setDate(d)}
+            highlightedDates={loggedDates}
+          >
+            <h1
+              className="font-extrabold tracking-tight leading-none mt-2"
+              style={{ fontSize: 32 }}
+            >
+              {formatDateID(date) === "Hari ini" ||
+              formatDateID(date) === "Kemarin"
+                ? formatDateID(date)
+                : new Date(date).toLocaleDateString("id-ID", {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                  })}
+            </h1>
+          </DatePopover>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setDate(shiftDate(date, -1))}
+            className="w-9 h-9 rounded-full bg-surface-2 hover:bg-surface text-ink border border-hairline flex items-center justify-center"
+            aria-label="Hari sebelumnya"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setDate(shiftDate(date, 1))}
+            disabled={date >= todayISO()}
+            className={cn(
+              "w-9 h-9 rounded-full flex items-center justify-center border border-hairline",
+              date >= todayISO()
+                ? "bg-surface-2/50 text-muted/40 cursor-not-allowed"
+                : "bg-surface-2 hover:bg-surface text-ink",
+            )}
+            aria-label="Hari berikutnya"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Daily summary */}
-      <div className="mb-6 p-6 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-600/20">
-        <div className="flex items-center gap-2 text-brand-100 text-sm font-medium">
-          <Flame className="w-4 h-4" />
-          Kalori hari ini
-        </div>
-        <div className="mt-1 flex items-baseline gap-2">
-          <span className="text-5xl font-bold tabular-nums">
-            {fmtNum(summary.total_kcal)}
-          </span>
-          {kcalTarget && (
-            <span className="text-brand-100">
-              / {fmtNum(kcalTarget)} kcal
-            </span>
-          )}
-        </div>
-        {kcalTarget && pct !== null && (
-          <div className="mt-3">
-            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-white rounded-full transition-all duration-300"
-                style={{ width: `${pct}%` }}
-              />
+      {/* Daily summary — Donut card */}
+      <Card radius="xl" shadow="paper-1" className="p-5 sm:p-6 mb-5">
+        <div className="flex items-center gap-4 sm:gap-6">
+          <Donut
+            value={summary.total_kcal}
+            target={kcalTarget ?? 2000}
+            size={140}
+            stroke={12}
+            color="var(--color-forest)"
+            track="var(--color-forest-100)"
+          >
+            <div className="text-[9px] font-bold uppercase tracking-wider text-muted">
+              Kalori
             </div>
-            <div className="mt-1.5 text-xs text-brand-100">
-              {pct >= 100
-                ? `Lewat target ${pct.toFixed(0)}%`
-                : `${pct.toFixed(0)}% dari target · sisa ${fmtNum(kcalTarget - summary.total_kcal)} kcal`}
+            <div
+              className="tabular mt-0.5"
+              style={{
+                fontFamily: "var(--font-serif)",
+                fontSize: 30,
+                lineHeight: 1,
+              }}
+            >
+              {fmtKcal(summary.total_kcal)}
             </div>
+            {kcalTarget && (
+              <div className="text-[10px] text-muted mt-0.5 tabular">
+                / {fmtKcal(kcalTarget)}
+              </div>
+            )}
+          </Donut>
+          <div className="flex-1 min-w-0">
+            {kcalTarget && pct !== null && pct < 100 && (
+              <div className="text-[13.5px] font-bold mb-3">
+                Sisa{" "}
+                <span className="tabular">
+                  {fmtKcal(kcalTarget - summary.total_kcal)}
+                </span>{" "}
+                kcal
+              </div>
+            )}
+            <LogMacroBar
+              label="Protein"
+              value={summary.total_protein_g}
+              target={targets?.protein_g ?? 0}
+              tone="forest"
+            />
+            <LogMacroBar
+              label="Lemak"
+              value={summary.total_fat_g}
+              target={targets?.fat_g ?? 0}
+              tone="clay"
+            />
+            <LogMacroBar
+              label="Karbo"
+              value={summary.total_carb_g}
+              target={targets?.carb_g ?? 0}
+              tone="sun"
+            />
           </div>
-        )}
+        </div>
         {!targets && (
-          <div className="mt-3 text-xs text-brand-100">
-            Belum ada target — <Link href="/onboarding" className="underline font-semibold">setup profil</Link> dulu biar tau range optimal kamu.
+          <div className="mt-4 pt-3 border-t border-hairline text-[12px] text-muted">
+            Belum ada target.{" "}
+            <Link
+              href="/onboarding"
+              className="underline font-semibold text-forest"
+            >
+              Setup profil
+            </Link>{" "}
+            biar tahu range optimal.
           </div>
         )}
-        <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
-          <Macro label="Protein" value={summary.total_protein_g} unit="g" />
-          <Macro label="Lemak" value={summary.total_fat_g} unit="g" />
-          <Macro label="Karbo" value={summary.total_carb_g} unit="g" />
-        </div>
-      </div>
+      </Card>
 
       {/* Weekly insights */}
       {weekInsights &&
@@ -763,6 +801,43 @@ function Macro({
       <div className="font-bold tabular-nums text-base mt-0.5">
         {value}
         <span className="text-xs font-normal opacity-80 ml-0.5">{unit}</span>
+      </div>
+    </div>
+  );
+}
+
+function LogMacroBar({
+  label,
+  value,
+  target,
+  tone,
+}: {
+  label: string;
+  value: number;
+  target: number;
+  tone: "forest" | "clay" | "sun";
+}) {
+  const pct = target > 0 ? Math.min(110, (value / target) * 100) : 0;
+  const barColor =
+    tone === "forest"
+      ? "bg-forest"
+      : tone === "clay"
+        ? "bg-clay"
+        : "bg-sun";
+  return (
+    <div className="mb-2 last:mb-0">
+      <div className="flex items-baseline justify-between text-[11.5px]">
+        <span className="font-semibold text-ink">{label}</span>
+        <span className="tabular text-muted">
+          <span className="font-bold text-ink">{Math.round(value)}g</span>
+          {target > 0 && <> / {Math.round(target)}</>}
+        </span>
+      </div>
+      <div className="mt-1 h-1.5 bg-surface-2 rounded-full overflow-hidden">
+        <div
+          className={cn("h-full rounded-full transition-all", barColor)}
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   );
